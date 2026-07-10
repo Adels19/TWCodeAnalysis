@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<library>
+
+	<book>
+		<title>The </title>
+		<author>J.R.R. Tolkien</author>
+		<genre>Fantasy</genre>
+		<isbn>978-0261103344</isbn>
+	</book>
+
+	<book>
+		<title>Clean Code</title>
+		<author>Robert C. Martin</author>
+		<genre>Programming</genre>
+		<isbn>978-0132350884</isbn>
+	</book>
+
+	<book>
+		<title>Harry Potter</title>
+		<author>J.K. Rowling</author>
+		<genre>Fantasy</genre>
+		<isbn>978-0747532743</isbn>
+	</book>
+
+	<book>
+		<title>Book </title>
+		<author>Author </author>
+		<genre>Genre </genre>
+		<isbn>isbn </isbn>
+	</book>
+
+</library>

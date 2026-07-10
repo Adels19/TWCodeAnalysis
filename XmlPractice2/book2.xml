@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<library>
+	<book>
+		<title>Book 4</title>
+		<author>Author 4</author>
+		<genre>Genre 4</genre>
+		<isbn>isbn 4</isbn>
+	</book>
+
+	<book>
+		<title>Book 5</title>
+		<author>Author 5</author>
+		<genre>Genre 5</genre>
+		<isbn>isbn 5</isbn>
+	</book>
+	<book>
+		<title>Book 6</title>
+		<author>Author 6</author>
+		<genre>Genre 6</genre>
+		<isbn>isbn 6</isbn>
+	</book>
+
+</library>
