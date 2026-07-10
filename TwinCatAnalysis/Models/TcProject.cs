@@ -1,18 +1,44 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace TwinCatAnalysis.Models
 {
+
+    // .tsproj — has a path, list of TcPlcProjects
     public class TcProject
     {
 
-        public string ProjectPath { get; set; }
-        public string ProjectName { get; set; }
+        public string name { get; set; } 
+        public string FilePath { get; set; } 
+        public List<TcPlcProject>  PlcProjects { get; set; } = new List<TcPlcProject>();
 
-        public List<TcPlcProject> Projects { get; set; } = new List<TcPlcProject>();
+        public TcProject()
+        {
+            PlcProjects = new List<TcPlcProject>();     // creates an empty list to add items later
+        }
+
+
+        // here we find
+
+        public void Load()
+        {
+            var dir = Path.GetDirectoryName(FilePath);
+            // simplest: search for *.plcproj under this tsproj's folder
+
+            foreach(var plcprojPath in Directory.EnumerateFiles(dir, "*.plcproj", SearchOption.AllDirectories))
+            {
+                var plc = new TcPlcProject { FilePath = plcprojPath };
+                plc.Load();
+                PlcProjects.Add(plc);
+            }
+
+        }
+
+
 
     }
 }

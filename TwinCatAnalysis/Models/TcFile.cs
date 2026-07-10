@@ -6,6 +6,9 @@ using System.Threading.Tasks;
 
 namespace TwinCatAnalysis.Models
 {
+
+
+    // .TcPOU/.TcGVL/.TcDUT — one code unit
     public class TcFile
     {
 
