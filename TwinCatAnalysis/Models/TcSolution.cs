@@ -23,12 +23,12 @@ namespace TwinCatAnalysis.Models
 
         public void Load()  
         {
-            var dir = Path.GetDirectoryName(FilePath);  // the dir where the solution .sln is, not filename
+            var dir = Path.GetDirectoryName(FilePath);  // C:\\plc_project\\CNCPlasma\\CNCPlasma.sln"
 
 
             foreach (var tsprojPath in Directory.EnumerateFiles(dir, "*.tsproj", SearchOption.AllDirectories))  
             {
-                var project = new TcProject { FilePath = tsprojPath };
+                var project = new TcProject { FilePath = tsprojPath };  // "C:\\plc_project\\CNCPlasma\\CNCPlasma\\CNCPlasma.tsproj"
                 project.Load(); // let the .tsproj load everything inside itself (TcProject -> .plcproj)
                 Projects.Add(project);  // adding in a list
             }

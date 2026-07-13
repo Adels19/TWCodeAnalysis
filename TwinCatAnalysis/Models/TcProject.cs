@@ -15,19 +15,19 @@ namespace TwinCatAnalysis.Models
         public string name { get; set; } 
         public string FilePath { get; set; } 
         public List<TcPlcProject>  PlcProjects { get; set; } = new List<TcPlcProject>();
+        // {TwinCatAnalysis.Models.TcPlcProject}    
 
         public TcProject()
         {
-            PlcProjects = new List<TcPlcProject>();     // creates an empty list to add items later
+            PlcProjects = new List<TcPlcProject>();     
         }
 
 
-        // here we find
 
         public void Load()
         {
             var dir = Path.GetDirectoryName(FilePath);
-            // simplest: search for *.plcproj under this tsproj's folder
+            
 
             foreach(var plcprojPath in Directory.EnumerateFiles(dir, "*.plcproj", SearchOption.AllDirectories))
             {

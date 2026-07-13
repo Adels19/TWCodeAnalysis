@@ -15,7 +15,7 @@ namespace TwinCatAnalysis.Core
 
             TcSolution solution = new TcSolution();
 
-            solution.FilePath = path;
+            solution.FilePath = path;   // C:\\plc_project\\CNCPlasma\\CNCPlasma.sln"
             solution.Load();
 
             return solution;
