@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Build.Construction;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -25,18 +26,19 @@ namespace TwinCatAnalysis.Models
         {
             var dir = Path.GetDirectoryName(FilePath);  // C:\\plc_project\\CNCPlasma\\CNCPlasma.sln"
 
+            var x = SolutionFile.Parse(FilePath).ProjectsByGuid
+                .Select(s => s.Value.AbsolutePath).Where(g => g.EndsWith(".tsproj") || g.EndsWith(".tspproj")).ToList();
 
-            foreach (var tsprojPath in Directory.EnumerateFiles(dir, "*.tsproj", SearchOption.AllDirectories))  
+            foreach (var tsprojPath in x)  
             {
                 var project = new TcProject { FilePath = tsprojPath };  // "C:\\plc_project\\CNCPlasma\\CNCPlasma\\CNCPlasma.tsproj"
-                project.Load(); // let the .tsproj load everything inside itself (TcProject -> .plcproj)
-                Projects.Add(project);  // adding in a list
+                project.Load(); 
+                Projects.Add(project);  
             }
         }
 
         
 
-        //string[] directories = Directory.GetDirectories(SolutionPath);
 
         
 

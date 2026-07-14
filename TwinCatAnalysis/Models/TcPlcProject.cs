@@ -30,57 +30,77 @@ namespace TwinCatAnalysis.Models
             PouFiles = new List<TcFile>();
             DutFiles = new List<TcFile>();
         }
-public void Load()
+        public void Load()
         {
           
             var dir = Path.GetDirectoryName(FilePath);
 
 
-            foreach(var  singleFile in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+            //foreach(var  singleFile in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
+            //{
+            //    string extension = Path.GetExtension(singleFile);
+            //    //string content = File.ReadAllText(singleFile);
+            //    string FileName = Path.GetFileName(singleFile);
+
+
+            //    if (extension == ".TcPOU")
+            //    {
+            //        TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension };
+            //        PouFiles.Add(file);
+            //        file.LoadXML();
+
+            //    }
+            //    else if (extension == ".TcDUT")
+            //    {
+            //        TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension };
+            //        DutFiles.Add(file);
+            //        //file.LoadXML();
+
+            //    }
+            //    else if (extension == ".TcGVL")
+            //    {
+            //        TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension };
+            //        GvlFiles.Add(file);
+                   
+            //    }
+
+            //}
+
+            
+            foreach (var singleFile in Directory.EnumerateFiles(dir, "*.TcPOU", SearchOption.AllDirectories))
             {
                 string extension = Path.GetExtension(singleFile);
                 //string content = File.ReadAllText(singleFile);
                 string FileName = Path.GetFileName(singleFile);
 
-                TcFile file = new TcFile { FilePath = singleFile, FileName=FileName, FileType = extension };
+                TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension };
 
-                if(extension == ".TcPOU")
-                {
-                    PouFiles.Add(file);
-                    file.LoadXML();
-
-                }
-                else if (extension == ".TcDUT")
-                {
-                    DutFiles.Add(file);
-                }else if (extension == ".TcGVL")
-                {
-                    GvlFiles.Add(file);
-                   
-                }
+                //pou.Load();
+                file.LoadXML();
+                PouFiles.Add(file);
 
             }
 
-            //foreach (var singleFile in Directory.EnumerateFiles(dir, "*.TcPOU",SearchOption.AllDirectories))
-            //{
-            //    var pou = new TcFile {FilePath = singleFile};
-            //    //pou.Load();
-            //    PouFiles.Add(pou);
+            foreach (var singleFile in Directory.EnumerateFiles(dir, "*.TcDUT", SearchOption.AllDirectories))
+            {
+                string extension = Path.GetExtension(singleFile);
+                string FileName = Path.GetFileName(singleFile);
 
-            //}
+                TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension };
 
-            //foreach (var singleFile in Directory.EnumerateFiles(dir, "*.TcDUT", SearchOption.AllDirectories))
-            //{
-            //    var dut = new TcFile { FilePath = singleFile };
-            //    DutFiles.Add(dut);
+                DutFiles.Add(file);
 
-            //}
-            //foreach (var singleFile in Directory.EnumerateFiles(dir, "*.TcGVL", SearchOption.AllDirectories))
-            //{
-            //    var gvl = new TcFile { FilePath = singleFile };
-            //    GvlFiles.Add(gvl);
+            }
+            foreach (var singleFile in Directory.EnumerateFiles(dir, "*.TcGVL", SearchOption.AllDirectories))
+            {
+                string extension = Path.GetExtension(singleFile);
+                string FileName = Path.GetFileName(singleFile);
 
-            //}
+                TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension }; 
+
+                GvlFiles.Add(file);
+
+            }
 
 
 

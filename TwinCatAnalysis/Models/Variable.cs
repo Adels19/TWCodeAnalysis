@@ -8,13 +8,15 @@ namespace TwinCatAnalysis.Models
 {
     public struct Variable
     {
-
+        public string DefinitionSource { get; set; }
         public string Name { get; set; }
         public string Type { get; set; }
         public string StartingValue { get; set; }
         public string UsedCount { get; set; }
 
+        public string Scope { get; set; }
 
+        //public string comment { get; set; }
 
 
     }

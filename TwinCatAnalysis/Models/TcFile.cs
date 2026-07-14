@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -20,7 +21,7 @@ namespace TwinCatAnalysis.Models
         public string FileName { get; set; }
         public string FileType { get; set; }
 
-        public string FunctionBlockName { get; set; }
+        //public string FunctionBlockName { get; set; }
 
 
 
@@ -59,18 +60,29 @@ namespace TwinCatAnalysis.Models
         {
                 var declaration = doc.Descendants().FirstOrDefault(x=>x.Name.LocalName == "Declaration");
                 var implementation = doc.Descendants().FirstOrDefault(x=>x.Name.LocalName == "Implementation");
+
                 if(declaration != null)
                 {
                     DeclarationText = declaration.Value;
+                     AnalyzeDeclaration();
                 }
                 if (implementation != null)
                 {
                     ImplementationText = implementation.Value;
                 }
+
         }
 
         public void ExtractDUT()
         {
+            //var declaration = doc.Descendants().FirstOrDefault(x => x.Name.LocalName == "Declaration");
+
+            //if(declaration != null)
+            //{
+            //    DeclarationText = declaration.Value;
+            //    AnalyzeDeclaration();
+            //}
+
 
         }
 
@@ -82,25 +94,76 @@ namespace TwinCatAnalysis.Models
 
         public void AnalyzeDeclaration()
         {
+            //string Comment;
 
-            string Type;
-            string Name ="";
-            string Scope;
-            bool Comment;
+            // Name : Type;
+            // Name : Type := Value;
+            // := ? 
+            // value is optional
 
-            
-            
+            StringReader reader = new StringReader(DeclarationText);
 
-                Match match = Regex.Match(DeclarationText, @"FUNCTION_BLOCK\s+(\w+)");
+            string line;
+            string currentScope = "";
+            string scope = "";
 
-            if (match.Success)
+            while ((line = reader.ReadLine()) != null)
             {
-                FunctionBlockName = match.Groups[1].Value;
+
+                line = line.Trim();
+
+                if (line.StartsWith("VAR"))
+                {
+                    currentScope = line;
+                    scope = line;
+               
+                }
+                else if (line.Contains("END_VAR"))
+                {
+                    currentScope = "";
+                }
+
+                else if (currentScope != "")
+                {
+
+                    string pattern = @"^\s*(\w+)\s*:\s*(\w+)(?:\s*:=\s*(\w+))?\s*;";
+                    Match match = Regex.Match(line, pattern);
+                  
+                    if (match.Success)
+                    {
+                        Variable variable = new Variable();
+
+                        variable.Name = match.Groups[1].Value;
+                        variable.Type = match.Groups[2].Value;
+                        variable.Scope = scope;
+                        variable.StartingValue = match.Groups[3].Value;
+                        
+                        
+
+                        variable.DefinitionSource = Path.GetFileNameWithoutExtension(FileName);
+                        variables.Add(variable);
+
+                    }
+                }
+
+                
             }
 
-            Variable variable = new Variable();
-            variable.Name = Name;
-            variables.Add(variable);
+
+
+
+            // TODO::
+            // I AnalyzeDeclaration for Dut, dali nova funkcija da zacuvuva vo nova lista ili mala izmena na veke napisanata za pou
+            // (oti vo dut ima struct namesto var, drugoto e  isto
+
+
+
+            //Variable variable = new Variable();
+            //variable.Name = name;
+            //variable.Type = type;
+
+            //variable.DefinitionSource = Path.GetFileNameWithoutExtension(FileName);//bez ekstenzijata
+            //variables.Add(variable);
         }
 
 

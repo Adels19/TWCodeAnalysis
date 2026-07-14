@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Build.Construction;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -31,12 +32,11 @@ namespace TwinCatAnalysis
             //openFileDialog.InitialDirectory = @"C:\";
             var res = openFileDialog.ShowDialog();
 
-
             if (res == DialogResult.OK)
             {
                 projectPath = openFileDialog.FileName;
 
-                ProjectLoader loader = new ProjectLoader();
+               ProjectLoader loader = new ProjectLoader();
 
                 TcSolution solution = loader.Load(projectPath);
             }

@@ -14,12 +14,12 @@ namespace TwinCatAnalysis.Models
 
         public string name { get; set; } 
         public string FilePath { get; set; } 
-        public List<TcPlcProject>  PlcProjects { get; set; } = new List<TcPlcProject>();
+        public TcPlcProject  PlcProjects { get; set; } = new TcPlcProject();
         // {TwinCatAnalysis.Models.TcPlcProject}    
 
         public TcProject()
         {
-            PlcProjects = new List<TcPlcProject>();     
+            PlcProjects = new TcPlcProject();     
         }
 
 
@@ -33,7 +33,8 @@ namespace TwinCatAnalysis.Models
             {
                 var plc = new TcPlcProject { FilePath = plcprojPath };
                 plc.Load();
-                PlcProjects.Add(plc);
+                PlcProjects = plc;
+                break;
             }
 
         }
