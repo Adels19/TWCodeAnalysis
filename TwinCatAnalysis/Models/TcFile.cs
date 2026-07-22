@@ -13,16 +13,13 @@ namespace TwinCatAnalysis.Models
 {
 
 
-    // .TcPOU/.TcGVL/.TcDUT — one code unit
+   
     public class TcFile
     {
 
         public string FilePath { get; set; }
         public string FileName { get; set; }
         public string FileType { get; set; }
-
-        //public string FunctionBlockName { get; set; }
-
 
 
 
@@ -32,16 +29,15 @@ namespace TwinCatAnalysis.Models
 
         public List<Variable> variables { get; set; } = new List<Variable>();
 
-
         public string DeclarationText { get; set; }
         public string ImplementationText { get; set; }
 
 
         public void LoadXML()
         {
-            doc = XDocument.Load(FilePath);
+            doc = XDocument.Load(FilePath); // "C:\\plc_project\\CNCPlasma\\CNCPlasma\\CNCPlasma\\POUs\\FB_Blinker.TcPOU"
 
-            if(FileType == ".TcPOU")
+            if (FileType == ".TcPOU")
             {
                 ExtractPOU();
 
@@ -69,6 +65,7 @@ namespace TwinCatAnalysis.Models
                 if (implementation != null)
                 {
                     ImplementationText = implementation.Value;
+                    AnalyzeImplementation();
                 }
 
         }
@@ -116,7 +113,7 @@ namespace TwinCatAnalysis.Models
                 {
                     currentScope = line;
                     scope = line;
-               
+
                 }
                 else if (line.Contains("END_VAR"))
                 {
@@ -128,7 +125,7 @@ namespace TwinCatAnalysis.Models
 
                     string pattern = @"^\s*(\w+)\s*:\s*(\w+)(?:\s*:=\s*(\w+))?\s*;";
                     Match match = Regex.Match(line, pattern);
-                  
+
                     if (match.Success)
                     {
                         Variable variable = new Variable();
@@ -137,33 +134,23 @@ namespace TwinCatAnalysis.Models
                         variable.Type = match.Groups[2].Value;
                         variable.Scope = scope;
                         variable.StartingValue = match.Groups[3].Value;
-                        
-                        
+
+
 
                         variable.DefinitionSource = Path.GetFileNameWithoutExtension(FileName);
                         variables.Add(variable);
-
                     }
                 }
-
-                
             }
+        }
 
 
 
-
-            // TODO::
-            // I AnalyzeDeclaration for Dut, dali nova funkcija da zacuvuva vo nova lista ili mala izmena na veke napisanata za pou
-            // (oti vo dut ima struct namesto var, drugoto e  isto
+        public void AnalyzeImplementation()
+        {
 
 
 
-            //Variable variable = new Variable();
-            //variable.Name = name;
-            //variable.Type = type;
-
-            //variable.DefinitionSource = Path.GetFileNameWithoutExtension(FileName);//bez ekstenzijata
-            //variables.Add(variable);
         }
 
 
@@ -171,3 +158,16 @@ namespace TwinCatAnalysis.Models
 
     
 }
+
+// TODO::
+// I AnalyzeDeclaration for Dut, dali nova funkcija da zacuvuva vo nova lista ili mala izmena na veke napisanata za pou
+// (oti vo dut ima struct namesto var, drugoto e  isto
+
+
+
+//Variable variable = new Variable();
+//variable.Name = name;
+//variable.Type = type;
+
+//variable.DefinitionSource = Path.GetFileNameWithoutExtension(FileName);//bez ekstenzijata
+//variables.Add(variable);

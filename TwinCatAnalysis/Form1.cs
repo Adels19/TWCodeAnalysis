@@ -18,11 +18,15 @@ namespace TwinCatAnalysis
         public Form1()
         {
             InitializeComponent();
+            gridControl1.DataSource = UiVariables;
         }
 
         // we save here the path so later we will set and send to other classes
 
         public string projectPath = "";
+
+        public List<Variable> UiVariables= new List<Variable>();
+
 
         private void btnOpenProject_Click(object sender, EventArgs e)
         {
@@ -39,10 +43,13 @@ namespace TwinCatAnalysis
                ProjectLoader loader = new ProjectLoader();
 
                 TcSolution solution = loader.Load(projectPath);
+
+                UiVariables = solution.GetAllVariables();
+                gridControl1.DataSource = UiVariables;
             }
 
 
-           
+            //gridControl1.Refresh();
 
 
             //TcSolution solution = new TcSolution();

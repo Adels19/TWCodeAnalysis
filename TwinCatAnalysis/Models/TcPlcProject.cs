@@ -1,9 +1,11 @@
-﻿using System;
+﻿using Microsoft.Build.Framework.XamlTypes;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace TwinCatAnalysis.Models
 {
@@ -13,101 +15,52 @@ namespace TwinCatAnalysis.Models
     {
 
         public string name { get; set; }    
-        public string FilePath { get; set; }   
-        
-
+        public string FilePath { get; set; }    // "C:\\plc_project\\CNCPlasma\\CNCPlasma\\CNCPlasma\\CNCPlasma.plcproj" -> Where is the PLC project file itself?
         public List<TcFile> allFiles { get; set; } = new List<TcFile>();
-        public List<TcFile> GvlFiles { get; set; } = new List<TcFile>();
-        public List<TcFile> PouFiles { get; set; } = new List<TcFile>();
-        public List<TcFile> DutFiles { get; set; } = new List<TcFile>();
 
+
+
+        public XDocument doc { get; set; }
 
 
 
         public TcPlcProject() 
         {
-            GvlFiles = new List<TcFile>();
-            PouFiles = new List<TcFile>();
-            DutFiles = new List<TcFile>();
+            allFiles = new List<TcFile>();
+          
         }
         public void Load()
         {
-          
-            var dir = Path.GetDirectoryName(FilePath);
 
+            var projectDirectory = Path.GetDirectoryName(FilePath);
 
-            //foreach(var  singleFile in Directory.EnumerateFiles(dir, "*", SearchOption.AllDirectories))
-            //{
-            //    string extension = Path.GetExtension(singleFile);
-            //    //string content = File.ReadAllText(singleFile);
-            //    string FileName = Path.GetFileName(singleFile);
+            doc = XDocument.Load(FilePath);
+            var CompileParts = doc.Descendants().Where(x => x.Name.LocalName == "Compile");
 
-
-            //    if (extension == ".TcPOU")
-            //    {
-            //        TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension };
-            //        PouFiles.Add(file);
-            //        file.LoadXML();
-
-            //    }
-            //    else if (extension == ".TcDUT")
-            //    {
-            //        TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension };
-            //        DutFiles.Add(file);
-            //        //file.LoadXML();
-
-            //    }
-            //    else if (extension == ".TcGVL")
-            //    {
-            //        TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension };
-            //        GvlFiles.Add(file);
-                   
-            //    }
-
-            //}
-
-            
-            foreach (var singleFile in Directory.EnumerateFiles(dir, "*.TcPOU", SearchOption.AllDirectories))
+            foreach (var x in CompileParts)
             {
-                string extension = Path.GetExtension(singleFile);
-                //string content = File.ReadAllText(singleFile);
-                string FileName = Path.GetFileName(singleFile);
 
-                TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension };
+                var hasInclude = x.Attribute("Include");    // {Include="DUTs\ST_Axis.TcDUT"}
 
-                //pou.Load();
-                file.LoadXML();
-                PouFiles.Add(file);
+                if (hasInclude != null)
+                {
+                    
+                    string includePath = hasInclude.Value; // "DUTs\\ST_Axis.TcDUT"
 
+                    string FileName = Path.GetFileName(includePath);    // "ST_Axis.TcDUT"
+                    string FileExtension = Path.GetExtension(includePath);  // .TcDUT
+                    string fullFilePath = Path.Combine(projectDirectory, includePath);  
+                    // absoulte path to the file, combining the current dir with the file we found
+
+                    TcFile file = new TcFile { FilePath = fullFilePath, FileName = FileName, FileType = FileExtension };
+
+                    file.LoadXML();
+                    allFiles.Add(file);
+
+                    //string FilePath = Path.GetFullPath(includePath);    // "C:\\repos\\TWCodeAnalysis\\TwinCatAnalysis\\bin\\Debug\\DUTs\\ST_Axis.TcDUT"
+
+                }
             }
-
-            foreach (var singleFile in Directory.EnumerateFiles(dir, "*.TcDUT", SearchOption.AllDirectories))
-            {
-                string extension = Path.GetExtension(singleFile);
-                string FileName = Path.GetFileName(singleFile);
-
-                TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension };
-
-                DutFiles.Add(file);
-
-            }
-            foreach (var singleFile in Directory.EnumerateFiles(dir, "*.TcGVL", SearchOption.AllDirectories))
-            {
-                string extension = Path.GetExtension(singleFile);
-                string FileName = Path.GetFileName(singleFile);
-
-                TcFile file = new TcFile { FilePath = singleFile, FileName = FileName, FileType = extension }; 
-
-                GvlFiles.Add(file);
-
-            }
-
-
-
         }
-
-        
-
-
     }
 }

@@ -22,24 +22,18 @@ namespace TwinCatAnalysis.Models
             PlcProjects = new TcPlcProject();     
         }
 
-
-
         public void Load()
         {
-            var dir = Path.GetDirectoryName(FilePath);
-            
+            var dir = Path.GetDirectoryName(FilePath);  // "C:\\plc_project\\CNCPlasma\\CNCPlasma"
 
-            foreach(var plcprojPath in Directory.EnumerateFiles(dir, "*.plcproj", SearchOption.AllDirectories))
+
+            foreach (var plcprojPath in Directory.EnumerateFiles(dir, "*.plcproj", SearchOption.AllDirectories))
             {
-                var plc = new TcPlcProject { FilePath = plcprojPath };
+                var plc = new TcPlcProject { FilePath = plcprojPath };  // "C:\\plc_project\\CNCPlasma\\CNCPlasma\\CNCPlasma\\CNCPlasma.plcproj"
                 plc.Load();
                 PlcProjects = plc;
                 break;
             }
-
         }
-
-
-
     }
 }

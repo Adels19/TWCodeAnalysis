@@ -15,7 +15,7 @@ namespace TwinCatAnalysis.Models
     {
 
         public string FilePath { get; set; }
-        public List<TcProject> Projects { get; set; }  // stores the projects, for example Motion.tsproj, HMI.tsproj..
+        public List<TcProject> Projects { get; set; }  // example Motion.tsproj, HMI.tsproj..
 
         public TcSolution() 
         {
@@ -24,7 +24,7 @@ namespace TwinCatAnalysis.Models
 
         public void Load()  
         {
-            var dir = Path.GetDirectoryName(FilePath);  // C:\\plc_project\\CNCPlasma\\CNCPlasma.sln"
+            var dir = Path.GetDirectoryName(FilePath);  // C:\plc_project\CNCPlasma
 
             var x = SolutionFile.Parse(FilePath).ProjectsByGuid
                 .Select(s => s.Value.AbsolutePath).Where(g => g.EndsWith(".tsproj") || g.EndsWith(".tspproj")).ToList();
@@ -37,10 +37,25 @@ namespace TwinCatAnalysis.Models
             }
         }
 
-        
+        public List<Variable> GetAllVariables()
+        {
+            List<Variable> variables = new List<Variable>();
+            List<TcFile> files = new List<TcFile>();
 
+            foreach(var project in Projects)
+            {
+                foreach(var file in project.PlcProjects.allFiles)
+                {
+                    foreach(var variable in file.variables)
+                    {
+                        variables.Add(variable);
+                    }
+                }
+            }
 
-        
+            return variables;
+
+        }
 
     }
 }
