@@ -38,10 +38,9 @@
             // btnOpenProject
             // 
             this.btnOpenProject.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.btnOpenProject.Location = new System.Drawing.Point(13, 537);
-            this.btnOpenProject.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnOpenProject.Location = new System.Drawing.Point(7, 530);
             this.btnOpenProject.Name = "btnOpenProject";
-            this.btnOpenProject.Size = new System.Drawing.Size(125, 40);
+            this.btnOpenProject.Size = new System.Drawing.Size(94, 32);
             this.btnOpenProject.TabIndex = 0;
             this.btnOpenProject.Text = "Open Project";
             this.btnOpenProject.UseVisualStyleBackColor = true;
@@ -52,27 +51,32 @@
             this.gridControl1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.gridControl1.Location = new System.Drawing.Point(13, 12);
+            this.gridControl1.EmbeddedNavigator.Margin = new System.Windows.Forms.Padding(2);
+            this.gridControl1.Location = new System.Drawing.Point(7, 10);
             this.gridControl1.MainView = this.gridView1;
+            this.gridControl1.Margin = new System.Windows.Forms.Padding(2);
             this.gridControl1.Name = "gridControl1";
-            this.gridControl1.Size = new System.Drawing.Size(722, 518);
+            this.gridControl1.Size = new System.Drawing.Size(580, 515);
             this.gridControl1.TabIndex = 1;
             this.gridControl1.ViewCollection.AddRange(new DevExpress.XtraGrid.Views.Base.BaseView[] {
             this.gridView1});
             // 
             // gridView1
             // 
+            this.gridView1.BorderStyle = DevExpress.XtraEditors.Controls.BorderStyles.Simple;
+            this.gridView1.DetailHeight = 284;
             this.gridView1.GridControl = this.gridControl1;
             this.gridView1.Name = "gridView1";
+            this.gridView1.OptionsEditForm.PopupEditFormWidth = 600;
+            this.gridView1.RowHeight = 30;
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(747, 590);
+            this.ClientSize = new System.Drawing.Size(598, 574);
             this.Controls.Add(this.gridControl1);
             this.Controls.Add(this.btnOpenProject);
-            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.Name = "Form1";
             this.Text = "TwinCatCodeAnalyzer";
             ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).EndInit();

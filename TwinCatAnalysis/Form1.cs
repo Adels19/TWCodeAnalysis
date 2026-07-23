@@ -19,42 +19,52 @@ namespace TwinCatAnalysis
         {
             InitializeComponent();
             gridControl1.DataSource = UiVariables;
+
         }
 
         // we save here the path so later we will set and send to other classes
 
         public string projectPath = "";
 
-        public List<Variable> UiVariables= new List<Variable>();
+        public List<Variable> UiVariables { get; set; } = new List<Variable>();
 
 
         private void btnOpenProject_Click(object sender, EventArgs e)
         {
 
             OpenFileDialog openFileDialog = new OpenFileDialog();
-            //openFileDialog.Filter = "Select a TwinCAT Project |*.plcproj";
-            //openFileDialog.InitialDirectory = @"C:\";
+            
             var res = openFileDialog.ShowDialog();
-
             if (res == DialogResult.OK)
             {
                 projectPath = openFileDialog.FileName;
 
-               ProjectLoader loader = new ProjectLoader();
-
+                ProjectLoader loader = new ProjectLoader();
                 TcSolution solution = loader.Load(projectPath);
 
                 UiVariables = solution.GetAllVariables();
+
                 gridControl1.DataSource = UiVariables;
+
+
+                // gridView1 features
+                gridView1.Columns["Name"].Caption = "Variable Name";
+                gridView1.Columns["Type"].Caption = "Data Type";
+                gridView1.Columns["Scope"].Caption = "Variable Scope";
+
+                gridView1.OptionsView.ShowAutoFilterRow = true;
+                //gridView1.OptionsView.ShowGroupPanel = true;
             }
+
+
+            // TODO::
+            // learn more about DevExpress GridControl
+            // handle this situation better, refresh constantly
 
 
             //gridControl1.Refresh();
 
 
-            //TcSolution solution = new TcSolution();
-            //solution.FilePath = projectPath;
-            //solution.Load();
 
         }
     }

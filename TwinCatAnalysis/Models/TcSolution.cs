@@ -37,25 +37,26 @@ namespace TwinCatAnalysis.Models
             }
         }
 
+
+        // TcSolution contains TcProject Projects list
+        // 
         public List<Variable> GetAllVariables()
         {
+           
             List<Variable> variables = new List<Variable>();
-            List<TcFile> files = new List<TcFile>();
 
-            foreach(var project in Projects)
+            foreach (var project in Projects)
             {
                 foreach(var file in project.PlcProjects.allFiles)
                 {
-                    foreach(var variable in file.variables)
+                    foreach(var v in file.variables)    // each file has its own variables
                     {
-                        variables.Add(variable);
+                        variables.Add(v);
                     }
                 }
             }
 
             return variables;
-
         }
-
     }
 }
