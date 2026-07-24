@@ -56,12 +56,10 @@ namespace TwinCatAnalysis
                 //gridView1.OptionsView.ShowGroupPanel = true;
             }
 
+            
+
 
             // TODO::
-            // learn more about DevExpress GridControl
-            // handle this situation better, refresh constantly
-
-
             //gridControl1.Refresh();
 
 

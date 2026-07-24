@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TwinCatAnalysis.Models
 {
-    public struct Variable
+    public class Variable
     {
         public string DefinitionSource { get; set; }
         public string Name { get; set; }
@@ -17,20 +17,46 @@ namespace TwinCatAnalysis.Models
 
         //public string comment { get; set; }
 
-        public List<VariableUsage> Usages { get; set; }
+        public List<VariableUsage> Usages { get; set; } = new List<VariableUsage>();
+
+    }
 
 
+
+    public enum UsageType
+    {
+        Read,
+        Write,
+        ReadWrite
+    }
+
+    public enum UsageContext
+    {
+        Assignment,
+        IfCondition,
+        ElseIfCondition,
+        IfBody,
+        ElseBody,
+        FunctionArgument,
+        MethodCall,
+        CaseSelector
     }
 
     public class VariableUsage
     {
         public Variable Variable { get; set; }  // it stores the reference to the existing Variable
-        public string UsageType{ get; set; }
-        //Read
-        //Write
-        //MethodCall
-        //FunctionArgument
 
-        public string MethodName { get; set; }
+        int usageCount = 0;
+        public UsageType usageType { get; set; }
+        public UsageContext usageContext { get; set; }
+
+        public string LineNumber { get; set; } 
+
+
     }
+
+
+    // FUNCTION BLOCK?
+   
+
 }

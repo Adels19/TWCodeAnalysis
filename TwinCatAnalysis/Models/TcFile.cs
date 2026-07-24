@@ -1,4 +1,5 @@
-﻿using System;
+﻿using DevExpress.Utils;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
+using static DevExpress.Utils.MVVM.Internal.ILReader;
 
 
 namespace TwinCatAnalysis.Models
@@ -135,8 +137,6 @@ namespace TwinCatAnalysis.Models
                         variable.Scope = scope;
                         variable.StartingValue = match.Groups[3].Value;
 
-
-
                         variable.DefinitionSource = Path.GetFileNameWithoutExtension(FileName);
                         variables.Add(variable);
                     }
@@ -146,28 +146,122 @@ namespace TwinCatAnalysis.Models
 
 
 
+
+
+
         public void AnalyzeImplementation()
         {
 
+            StringReader reader = new StringReader(ImplementationText);
+            string line;
 
+            bool insideCase = false;     // use it properly
+            string currentCaseLabel = "";
+
+
+
+            while ((line = reader.ReadLine()) != null)
+            {
+                line = line.Trim();
+
+                string expression = "";
+                string CasePattern = @"CASE\s*(.+?)\s*OF";
+                string caseLabel = @"^\d+\s*:";
+
+
+                Match match = Regex.Match(line, CasePattern);
+
+
+                if (line.StartsWith("CASE") && line.EndsWith("OF"))
+                {
+                    expression = match.Groups[1].Value;
+                    extractExpression(expression);
+                    insideCase = true;
+                    continue;
+                }
+
+
+                if (line.StartsWith("END_CASE"))
+                {
+                    insideCase = false;
+                    continue;
+                }
+
+
+                Match match1 = Regex.Match(line, caseLabel);
+                if (match1.Success)
+                {
+                    currentCaseLabel = match1.Groups[1].Value;
+                }
+
+                if (insideCase && !match1.Success)
+                {
+
+                }
+
+                   
+
+             }
+                    
+               
+
+                
+
+            
 
         }
 
 
-    }
 
+        public void extractExpression(string expression)
+        {
+            // GetState(iStateFB)  group1 - GetState, group2 - iStateFB
+            string isFunction = @"^\s*(\w+)\s*\((.*?)\)\s*$";
+            Match match = Regex.Match(expression, isFunction);
+
+            VariableUsage usages = new VariableUsage();
+
+            // what kind of CASE are possible? (in my example only with variable)
+            if (match.Success)
+            {
+                string functionName = match.Groups[1].Value;
+                string arguments = match.Groups[2].Value;
+
+                if (string.IsNullOrWhiteSpace(arguments))
+                {
+                    // no arguments, only funct
+                }
+                else
+                {
+                    foreach (var v in variables)
+                    {
+                        if (v.Name == arguments)
+                        {
+                            usages.usageType = UsageType.Read;
+                            usages.usageContext = UsageContext.FunctionArgument;
+
+                            v.Usages.Add(usages);
+                        }
+                    }
+                }
+            }
+            else
+            {
+                foreach (var v in variables)
+                {
+                    if(v.Name == expression)
+                    {
+                        usages.usageType = UsageType.Read;
+                        usages.usageContext = UsageContext.CaseSelector;
+                        v.Usages.Add(usages);   // this is not working.. :(
+                    }
+                }
+            }
+        }
+
+    }
     
 }
 
 // TODO::
-// I AnalyzeDeclaration for Dut, dali nova funkcija da zacuvuva vo nova lista ili mala izmena na veke napisanata za pou
-// (oti vo dut ima struct namesto var, drugoto e  isto
 
-
-
-//Variable variable = new Variable();
-//variable.Name = name;
-//variable.Type = type;
-
-//variable.DefinitionSource = Path.GetFileNameWithoutExtension(FileName);//bez ekstenzijata
-//variables.Add(variable);

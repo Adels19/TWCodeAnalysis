@@ -38,8 +38,7 @@ namespace TwinCatAnalysis.Models
         }
 
 
-        // TcSolution contains TcProject Projects list
-        // 
+        
         public List<Variable> GetAllVariables()
         {
            
@@ -55,7 +54,6 @@ namespace TwinCatAnalysis.Models
                     }
                 }
             }
-
             return variables;
         }
     }
