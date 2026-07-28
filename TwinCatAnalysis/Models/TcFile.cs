@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Mime;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -15,7 +16,7 @@ namespace TwinCatAnalysis.Models
 {
 
 
-   
+
     public class TcFile
     {
 
@@ -43,32 +44,33 @@ namespace TwinCatAnalysis.Models
             {
                 ExtractPOU();
 
-            }else if (FileType == ".TcDUT")
+            }
+            else if (FileType == ".TcDUT")
             {
                 ExtractDUT();
             }
-            else if(FileType == ".TcGVL")
+            else if (FileType == ".TcGVL")
             {
                 ExtractGVL();
             }
-            
+
         }
 
         public void ExtractPOU()
         {
-                var declaration = doc.Descendants().FirstOrDefault(x=>x.Name.LocalName == "Declaration");
-                var implementation = doc.Descendants().FirstOrDefault(x=>x.Name.LocalName == "Implementation");
+            var declaration = doc.Descendants().FirstOrDefault(x => x.Name.LocalName == "Declaration");
+            var implementation = doc.Descendants().FirstOrDefault(x => x.Name.LocalName == "Implementation");
 
-                if(declaration != null)
-                {
-                    DeclarationText = declaration.Value;
-                     AnalyzeDeclaration();
-                }
-                if (implementation != null)
-                {
-                    ImplementationText = implementation.Value;
-                    AnalyzeImplementation();
-                }
+            if (declaration != null)
+            {
+                DeclarationText = declaration.Value;
+                AnalyzeDeclaration();
+            }
+            if (implementation != null)
+            {
+                ImplementationText = implementation.Value;
+                AnalyzeImplementation();
+            }
 
         }
 
@@ -155,8 +157,24 @@ namespace TwinCatAnalysis.Models
             StringReader reader = new StringReader(ImplementationText);
             string line;
 
-            bool insideCase = false;     // use it properly
-            string currentCaseLabel = "";
+            //bool insideCase = false;     // use it properly
+            string currentContext = "";
+            string CaseName = "";
+            bool insideCase = false;
+
+            // string THEN/ELSE - to know that is from IF expression
+
+
+            // .Q, .IN, .ET, .PT... ??
+            //  bBlinker := NOT bBlinker;   ??
+
+
+            // after then: 
+            // bBlinker := TRUE/FALSE;
+            // bBlinker := 10/-10;
+            // iState := iLastState/ NOT iState;
+            // iCount := iCount + 1;
+            // left side: write, assignment, right side: read, assignment
 
 
 
@@ -164,104 +182,221 @@ namespace TwinCatAnalysis.Models
             {
                 line = line.Trim();
 
-                string expression = "";
-                string CasePattern = @"CASE\s*(.+?)\s*OF";
-                string caseLabel = @"^\d+\s*:";
+                string IfElseCase = "";
 
+                // line = CASE iState OF
 
-                Match match = Regex.Match(line, CasePattern);
-
-
+                // CASE detected:
                 if (line.StartsWith("CASE") && line.EndsWith("OF"))
                 {
-                    expression = match.Groups[1].Value;
-                    extractExpression(expression);
+                    CaseName = line;
+                    extractCaseExpression(line);
                     insideCase = true;
-                    continue;
                 }
-
-
-                if (line.StartsWith("END_CASE"))
+                else if (line.StartsWith("END_CASE"))
                 {
+                    CaseName = "";
                     insideCase = false;
-                    continue;
                 }
-
-
-                Match match1 = Regex.Match(line, caseLabel);
-                if (match1.Success)
-                {
-                    currentCaseLabel = match1.Groups[1].Value;
-                }
-
-                if (insideCase && !match1.Success)
-                {
-
-                }
-
-                   
-
-             }
-                    
-               
-
                 
 
+                //if (insideCase && !match1.Success)
+                //{
+                //    // pattern for :=
+                //    // pattern for IF, ELSE, THEN, AND, OR, END_IF (maybe function outside so we could use it in CASE and outside)
+                //}
+
+
+                // IF, ELSIF, ELSE
+                if (line.StartsWith("IF") || line.StartsWith("ELSIF"))
+                {
+
+                    if (insideCase)
+                    {
+                        extract_IF_Expression(line,CaseName);
+                    }
+
+
+
+                }
+
+                
+                if (line.Contains(":="))
+                {
+                    int parenthesisDepth = 0;
+
+                    for (int i = 0; i < line.Length; i++)
+                    {
+                        char ch = line[i];
+
+                        if (ch == '(')
+                        {
+                            parenthesisDepth++;
+                        }
+                        else if (ch == ')')
+                        {
+                            parenthesisDepth--;
+                        }
+
+                        if (ch == ':' && i + 1 < line.Length && line[i + 1] == '=')
+                        {
+                            // FunctionArgument
+                            if (parenthesisDepth > 0)
+                            {
+                                extract_Function_Expression(line);
+                            }
+                            // Assignment
+                            else
+                            {
+                                extract_Assignment_Expression(line);
+                            }
+                        }
+                    }
+                } else if (line.Contains("()"))
+                {
+                    // for the rest functional call without :=, toest za -> PRG_Blinker();
+                    extract_Function_Expression(line);
+
+                }
+
+                // fbTimer(...) -> fbTimer = function call, (...) = function argument
+
+
+
+
+                // WHILE detected:
+                if (line.StartsWith("WHILE"))
+                {
+
+                }
+                // if IF ELSE outside the CASE
+                // if not CASE or IF ELSE (smth else):
+                // maybe outside function for variables like bBlinker := FALSE; fbTimer2.IN := FALSE; that could work in or out the CASE, IF, so I do not have to write it many times
+
+
+            }
+
+
+            // TODO:: 
+            // Find all schemas for the variables. Make a function that u could use many times (optimized code).
+
+
+
+
+        }
+
+        // possible functions (functionCall or functionArgument)
+        // x(IN := y)
+        // x()
+        // x(y)
+        // x(y := 10)
+        private void extract_Function_Expression(string line)
+        {
+            throw new NotImplementedException();
+        }
+
+
+
+
+        // possible assignments:
+        // x := y     x - write, y - read / assignment
+        // x := y()   x - write/assignment, y-read/functionalCall
+        // x := y(a)  x - write/assignment, y-read/functionalCall, a-read/functionArgument
+        // x.a := y   x.a - write/assignment
+        private void extract_Assignment_Expression(string line)
+        {
+            throw new NotImplementedException();
+        }
+
+
+
+
+
+        public void extract_IF_Expression(string line, string caseName)
+        {
+            string CaseName = caseName;
+            string IfPattern = @"^(?:IF|ELSIF)\s*(.+?)\s*THEN";
+
+            Match matchIfPattern = Regex.Match(line, IfPattern);
+            string condition = matchIfPattern.Groups[1].Value;
+            // "bBlinkerInput = TRUE"
+
+
+            // IF fbStart.Q = TRUE AND rLength <> 0 AND rWidth <> 0 AND (iLastState = 5 OR iLastState = 0) THEN
+            // ELSIF fbStart.Q = TRUE AND rLength <> 0 AND rWidth <> 0 AND bXFor = TRUE THEN
+            // iState:= 30;
+
+
+            if (matchIfPattern.Success)
+            {
+                foreach(var variable in variables)
+                {
+                    if (condition.Contains(variable.Name))
+                    {
+                        VariableUsage usages = new VariableUsage();
+
+                        //usages.Variable = variable; // ?
+                        usages.usageType = UsageType.Read;
+                        usages.usageContext = UsageContext.IfCondition;
+
+                        // IF inside Case
+                        if (CaseName != "")
+                        {
+                            usages.CaseName = CaseName;
+                        }
+
+                        variable.Usages.Add(usages);
+
+                    }
+                }
+            }
             
 
         }
 
-
-
-        public void extractExpression(string expression)
+        public void extractCaseExpression(string line)
         {
-            // GetState(iStateFB)  group1 - GetState, group2 - iStateFB
-            string isFunction = @"^\s*(\w+)\s*\((.*?)\)\s*$";
-            Match match = Regex.Match(expression, isFunction);
 
-            VariableUsage usages = new VariableUsage();
+            // pr. line = CASE iStateFB OF
+            // CASE iStateFB(), iStateFB()
+            // GetState(iStateFB)  group1 - GetState, group2 - iStateFB
+
+            //string isFunction = @"^\s*(\w+)\s*\((.*?)\)\s*$";
+
+            string CasePattern = @"CASE\s*(.+?)\s*OF";
+            //string CaseName = line;
+
+            Match matchCasePattern = Regex.Match(line, CasePattern);
+            string expression = matchCasePattern.Groups[1].Value;
+
+
+
+            if (matchCasePattern.Success)
+            {
+                VariableUsage usages = new VariableUsage();
+
+                foreach (var variable in variables)
+                {
+                    if (expression.Contains(variable.Name))
+                    {
+                        //usages.Variable = variable; // ?
+                        usages.usageType = UsageType.Read;
+                        usages.usageContext = UsageContext.CaseCondition;
+                    }
+                    variable.Usages.Add(usages);
+                }
+                usages.CaseName = line;
+
+            }
 
             // what kind of CASE are possible? (in my example only with variable)
-            if (match.Success)
-            {
-                string functionName = match.Groups[1].Value;
-                string arguments = match.Groups[2].Value;
 
-                if (string.IsNullOrWhiteSpace(arguments))
-                {
-                    // no arguments, only funct
-                }
-                else
-                {
-                    foreach (var v in variables)
-                    {
-                        if (v.Name == arguments)
-                        {
-                            usages.usageType = UsageType.Read;
-                            usages.usageContext = UsageContext.FunctionArgument;
-
-                            v.Usages.Add(usages);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                foreach (var v in variables)
-                {
-                    if(v.Name == expression)
-                    {
-                        usages.usageType = UsageType.Read;
-                        usages.usageContext = UsageContext.CaseSelector;
-                        v.Usages.Add(usages);   // this is not working.. :(
-                    }
-                }
-            }
         }
 
+
+
     }
-    
+
 }
 
-// TODO::
 
