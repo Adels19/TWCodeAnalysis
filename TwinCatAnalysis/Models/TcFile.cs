@@ -1,9 +1,12 @@
-﻿using DevExpress.Utils;
+﻿using DevExpress.Export.Xl;
+using DevExpress.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Mime;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -149,7 +152,7 @@ namespace TwinCatAnalysis.Models
 
 
 
-
+        public int LineNumberCounter = 1;
 
         public void AnalyzeImplementation()
         {
@@ -158,7 +161,9 @@ namespace TwinCatAnalysis.Models
             string line;
 
             //bool insideCase = false;     // use it properly
+
             string currentContext = "";
+
             string CaseName = "";
             bool insideCase = false;
 
@@ -167,7 +172,6 @@ namespace TwinCatAnalysis.Models
 
             // .Q, .IN, .ET, .PT... ??
             //  bBlinker := NOT bBlinker;   ??
-
 
             // after then: 
             // bBlinker := TRUE/FALSE;
@@ -198,7 +202,6 @@ namespace TwinCatAnalysis.Models
                     CaseName = "";
                     insideCase = false;
                 }
-                
 
                 //if (insideCase && !match1.Success)
                 //{
@@ -206,22 +209,17 @@ namespace TwinCatAnalysis.Models
                 //    // pattern for IF, ELSE, THEN, AND, OR, END_IF (maybe function outside so we could use it in CASE and outside)
                 //}
 
-
                 // IF, ELSIF, ELSE
-                if (line.StartsWith("IF") || line.StartsWith("ELSIF"))
+                else if (line.StartsWith("IF") || line.StartsWith("ELSIF"))
                 {
-
-                    if (insideCase)
-                    {
+                    //if (insideCase)
+                    //{
                         extract_IF_Expression(line,CaseName);
-                    }
-
-
-
+                    //}
                 }
 
                 
-                if (line.Contains(":="))
+                else if (line.Contains(":="))
                 {
                     int parenthesisDepth = 0;
 
@@ -273,14 +271,15 @@ namespace TwinCatAnalysis.Models
                 // if not CASE or IF ELSE (smth else):
                 // maybe outside function for variables like bBlinker := FALSE; fbTimer2.IN := FALSE; that could work in or out the CASE, IF, so I do not have to write it many times
 
+                // if it is comment, starts with *( or //
+
+                LineNumberCounter++;
 
             }
 
 
             // TODO:: 
             // Find all schemas for the variables. Make a function that u could use many times (optimized code).
-
-
 
 
         }
@@ -292,7 +291,10 @@ namespace TwinCatAnalysis.Models
         // x(y := 10)
         private void extract_Function_Expression(string line)
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
+
+            // could be method: fbMotor.Start(); -> instance.method()
+
         }
 
 
@@ -305,7 +307,7 @@ namespace TwinCatAnalysis.Models
         // x.a := y   x.a - write/assignment
         private void extract_Assignment_Expression(string line)
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
         }
 
 
@@ -319,57 +321,65 @@ namespace TwinCatAnalysis.Models
 
             Match matchIfPattern = Regex.Match(line, IfPattern);
             string condition = matchIfPattern.Groups[1].Value;
-            // "bBlinkerInput = TRUE"
-
 
             // IF fbStart.Q = TRUE AND rLength <> 0 AND rWidth <> 0 AND (iLastState = 5 OR iLastState = 0) THEN
             // ELSIF fbStart.Q = TRUE AND rLength <> 0 AND rWidth <> 0 AND bXFor = TRUE THEN
             // iState:= 30;
 
+            // so we get ( fbStart.Q = TRUE AND rLength <> 0 AND rWidth <> 0 AND (iLastState = 5 OR iLastState = 0) )
 
-            if (matchIfPattern.Success)
+            List<string> listOfElements = new List<string>();
+            string patternForElements = @"\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\b";         //
+
+            MatchCollection matchesElements = Regex.Matches(condition, patternForElements);
+
+            foreach(Match match in matchesElements)
             {
-                foreach(var variable in variables)
-                {
-                    if (condition.Contains(variable.Name))
-                    {
-                        VariableUsage usages = new VariableUsage();
+                listOfElements.Add(match.Value);
+            }
 
+            foreach (var variable in variables)
+            {
+                for (int i = 0; i < listOfElements.Count; i++)
+                {
+                    if (listOfElements[i].Contains("."))
+                    {
+                        listOfElements[i] = listOfElements[i].Split('.')[0];
+                    }
+
+                    VariableUsage usages = new VariableUsage();
+
+                    if (listOfElements[i].Contains(variable.Name))
+                    {
                         //usages.Variable = variable; // ?
                         usages.usageType = UsageType.Read;
                         usages.usageContext = UsageContext.IfCondition;
+                        usages.lineNumber = LineNumberCounter;
 
                         // IF inside Case
                         if (CaseName != "")
                         {
                             usages.CaseName = CaseName;
                         }
-
                         variable.Usages.Add(usages);
-
                     }
                 }
             }
-            
-
         }
+
+
 
         public void extractCaseExpression(string line)
         {
-
-            // pr. line = CASE iStateFB OF
+            // pr. line = CASE iStateFB OF, different then CASE iState OF
             // CASE iStateFB(), iStateFB()
             // GetState(iStateFB)  group1 - GetState, group2 - iStateFB
 
             //string isFunction = @"^\s*(\w+)\s*\((.*?)\)\s*$";
 
             string CasePattern = @"CASE\s*(.+?)\s*OF";
-            //string CaseName = line;
-
             Match matchCasePattern = Regex.Match(line, CasePattern);
             string expression = matchCasePattern.Groups[1].Value;
-
-
 
             if (matchCasePattern.Success)
             {
@@ -377,22 +387,25 @@ namespace TwinCatAnalysis.Models
 
                 foreach (var variable in variables)
                 {
-                    if (expression.Contains(variable.Name))
+                    if (expression.Contains("."))
                     {
-                        //usages.Variable = variable; // ?
+                        expression = expression.Split('.')[0];
+                    }
+
+                    if (expression==variable.Name)
+                    {
+                        usages.Variable = variable; // do i need this?
                         usages.usageType = UsageType.Read;
                         usages.usageContext = UsageContext.CaseCondition;
+                        usages.CaseName = line;
+                        usages.lineNumber = LineNumberCounter;
+
+                        variable.Usages.Add(usages);
                     }
-                    variable.Usages.Add(usages);
                 }
-                usages.CaseName = line;
-
             }
-
             // what kind of CASE are possible? (in my example only with variable)
-
         }
-
 
 
     }

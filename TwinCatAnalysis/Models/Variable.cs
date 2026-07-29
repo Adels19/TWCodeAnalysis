@@ -43,20 +43,28 @@ namespace TwinCatAnalysis.Models
 
     public class VariableUsage
     {
-        //public Variable Variable { get; set; }  // it stores the reference to the existing Variable
+        public Variable Variable { get; set; }  // it stores the reference to the existing Variable
         public UsageType usageType { get; set; }
         public UsageContext usageContext { get; set; }
-        public string lineNumber { get; set; }
+        public int lineNumber { get; set; }
         public string CaseName { get; set; }
 
 
     }
 
+    public class MethodUsage
+    {
+        public string Name { get; set; }
+        public string Context { get; set; }
+        public string Line { get; set; }
 
-   
+    }
 
 
 
-   
+
+
+
+
 
 }
