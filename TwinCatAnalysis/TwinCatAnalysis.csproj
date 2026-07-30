@@ -126,6 +126,7 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="Models\Method.cs" />
     <Compile Include="Models\TcFile.cs" />
     <Compile Include="Models\TcPlcProject.cs" />
     <Compile Include="Models\TcProject.cs" />

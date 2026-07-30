@@ -29,7 +29,8 @@ namespace TwinCatAnalysis.Models
     public enum UsageType
     {
         Read,
-        Write
+        Write,
+        Call
     }
 
     public enum UsageContext

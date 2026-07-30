@@ -1,4 +1,5 @@
-﻿using DevExpress.Export.Xl;
+﻿using DevExpress.Drawing.Internal.Fonts.Interop;
+using DevExpress.Export.Xl;
 using DevExpress.Utils;
 using System;
 using System.Collections.Generic;
@@ -34,9 +35,9 @@ namespace TwinCatAnalysis.Models
         //public string FileContent { get; set; }
 
         public List<Variable> variables { get; set; } = new List<Variable>();
-
         public string DeclarationText { get; set; }
         public string ImplementationText { get; set; }
+        public List<Method> Methods { get; set; } = new List<Method>();
 
 
         public void LoadXML()
@@ -64,6 +65,8 @@ namespace TwinCatAnalysis.Models
             var declaration = doc.Descendants().FirstOrDefault(x => x.Name.LocalName == "Declaration");
             var implementation = doc.Descendants().FirstOrDefault(x => x.Name.LocalName == "Implementation");
 
+            var method = doc.Descendants().FirstOrDefault(x => x.Name.LocalName == "Method");
+
             if (declaration != null)
             {
                 DeclarationText = declaration.Value;
@@ -73,6 +76,15 @@ namespace TwinCatAnalysis.Models
             {
                 ImplementationText = implementation.Value;
                 AnalyzeImplementation();
+            }
+            if(method != null)
+            {
+                var methodName = method.Attribute("Name")?.Value;
+                Method m = new Method();
+                m.Name = methodName;
+
+                Methods.Add(m);
+               
             }
 
         }
@@ -86,8 +98,6 @@ namespace TwinCatAnalysis.Models
             //    DeclarationText = declaration.Value;
             //    AnalyzeDeclaration();
             //}
-
-
         }
 
 
@@ -95,6 +105,7 @@ namespace TwinCatAnalysis.Models
         {
 
         }
+
 
         public void AnalyzeDeclaration()
         {
@@ -153,6 +164,9 @@ namespace TwinCatAnalysis.Models
 
 
         public int LineNumberCounter = 1;
+        public string Statement = "";
+        public string CaseName = "";
+
 
         public void AnalyzeImplementation()
         {
@@ -160,27 +174,13 @@ namespace TwinCatAnalysis.Models
             StringReader reader = new StringReader(ImplementationText);
             string line;
 
-            //bool insideCase = false;     // use it properly
 
             string currentContext = "";
 
-            string CaseName = "";
-            bool insideCase = false;
-
             // string THEN/ELSE - to know that is from IF expression
-
 
             // .Q, .IN, .ET, .PT... ??
             //  bBlinker := NOT bBlinker;   ??
-
-            // after then: 
-            // bBlinker := TRUE/FALSE;
-            // bBlinker := 10/-10;
-            // iState := iLastState/ NOT iState;
-            // iCount := iCount + 1;
-            // left side: write, assignment, right side: read, assignment
-
-
 
             while ((line = reader.ReadLine()) != null)
             {
@@ -188,45 +188,33 @@ namespace TwinCatAnalysis.Models
 
                 string IfElseCase = "";
 
-                // line = CASE iState OF
+                bool IsComment = line.Contains("//") || line.Contains("*)") || line.Contains("*(");
 
-                // CASE detected:
-                if (line.StartsWith("CASE") && line.EndsWith("OF"))
+                // && line.EndsWith("OF") - not neccessary
+                if (line.StartsWith("CASE") && !IsComment)
                 {
                     CaseName = line;
                     extractCaseExpression(line);
-                    insideCase = true;
                 }
-                else if (line.StartsWith("END_CASE"))
+                else if (line.StartsWith("END_CASE") && !IsComment)
                 {
                     CaseName = "";
-                    insideCase = false;
                 }
-
-                //if (insideCase && !match1.Success)
-                //{
-                //    // pattern for :=
-                //    // pattern for IF, ELSE, THEN, AND, OR, END_IF (maybe function outside so we could use it in CASE and outside)
-                //}
 
                 // IF, ELSIF, ELSE
-                else if (line.StartsWith("IF") || line.StartsWith("ELSIF"))
+                else if ((line.StartsWith("IF") || line.StartsWith("ELSIF")) && !IsComment)
                 {
-                    //if (insideCase)
-                    //{
-                        extract_IF_Expression(line,CaseName);
-                    //}
+                    extract_IF_Expression(line);
                 }
 
-                
-                else if (line.Contains(":="))
+                // Arguments, Functions...
+                else if (line.Contains(":=") && !IsComment)
                 {
                     int parenthesisDepth = 0;
 
                     for (int i = 0; i < line.Length; i++)
                     {
                         char ch = line[i];
-
                         if (ch == '(')
                         {
                             parenthesisDepth++;
@@ -241,38 +229,36 @@ namespace TwinCatAnalysis.Models
                             // FunctionArgument
                             if (parenthesisDepth > 0)
                             {
+                                // fbStop(CLK:= bStop);
+                              
                                 extract_Function_Expression(line);
+                                break;
                             }
                             // Assignment
                             else
                             {
+                                // "fbTimer1.IN := TRUE;"
+                              
                                 extract_Assignment_Expression(line);
+                                break;
                             }
                         }
                     }
+
+                    
+
                 } else if (line.Contains("()"))
                 {
-                    // for the rest functional call without :=, toest za -> PRG_Blinker();
-                    extract_Function_Expression(line);
-
+                    // method vs function???
+                    // example Error()
                 }
 
-                // fbTimer(...) -> fbTimer = function call, (...) = function argument
-
-
-
-
-                // WHILE detected:
+                // WHILE detected: ??
                 if (line.StartsWith("WHILE"))
                 {
 
                 }
-                // if IF ELSE outside the CASE
-                // if not CASE or IF ELSE (smth else):
-                // maybe outside function for variables like bBlinker := FALSE; fbTimer2.IN := FALSE; that could work in or out the CASE, IF, so I do not have to write it many times
-
-                // if it is comment, starts with *( or //
-
+              
                 LineNumberCounter++;
 
             }
@@ -289,34 +275,197 @@ namespace TwinCatAnalysis.Models
         // x()
         // x(y)
         // x(y := 10)
-        private void extract_Function_Expression(string line)
+        public void extract_Function_Expression(string line)
         {
-            //throw new NotImplementedException();
 
             // could be method: fbMotor.Start(); -> instance.method()
 
+            // 2.
+            // MotorX.MC_Power(Axis:= MotorX.Motor, Enable:= bPowerEnable, Enable_Positive:= bPowerEnable, Enable_Negative:= bPowerEnable, Override:= 100.0);
+            // MotorX → FunctionalCall
+
+
+            // example line:
+            // MotorX.MC_Power(Axis:= MotorX.Motor, Enable:= bPowerEnable, Enable_Positive:= bPowerEnable, Enable_Negative:= bPowerEnable, Override:= 100.0);
+
+            string pattern = @"^\s*([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*\((.*)\)\s*;?$";
+            Match match = Regex.Match(line, pattern);
+
+
+            if (match.Success)
+            {
+                string functionCall = match.Groups[1].Value;
+                string arguments = match.Groups[2].Value;
+
+                // left side CALL - example:
+                // MotorX.MC_Power
+                if (functionCall.Contains("."))
+                {
+                    functionCall = functionCall.Split('.')[0];
+                }
+                foreach (var variable in variables)
+                {
+                    if (functionCall == variable.Name)
+                    {
+                        VariableUsage usages = new VariableUsage();
+
+                        usages.Variable = variable; // do i need this?
+                        usages.usageType = UsageType.Read;
+                        usages.usageContext = UsageContext.FunctionalCall;
+                        //usages.CaseName = line;
+                        usages.lineNumber = LineNumberCounter;
+
+                        variable.Usages.Add(usages);
+                        break;
+                    }
+                }
+
+
+
+                // right side ARGUMENTS - example:
+                // Axis:= MotorX.Motor, Enable:= bPowerEnable, Enable_Positive:= bPowerEnable, Enable_Negative:= bPowerEnable, Override:= 100.0
+                List<string> rightSides = new List<string>();
+                // MotorX.Motor, bPowerEnable..
+
+                string argPattern = @":=\s*([^,]+)";
+                MatchCollection matches = Regex.Matches(arguments, argPattern);
+
+                foreach (Match m in matches)
+                {
+                    rightSides.Add(m.Groups[1].Value.Trim());
+                    // MotorX.Motor, bPowerEnable
+                }
+
+                foreach(var variable in variables)
+                {
+                    for (int i = 0; i < rightSides.Count; i++)
+                    {
+                        if (rightSides[i].Contains("."))
+                        {
+                            rightSides[i] = rightSides[i].Split('.')[0];
+                        }
+
+                        VariableUsage usages = new VariableUsage();
+
+                        if (rightSides[i]==variable.Name)
+                        {
+                            //usages.Variable = variable; // ?
+                            usages.usageType = UsageType.Read;
+                            usages.usageContext = UsageContext.FunctionArgument;
+                            usages.lineNumber = LineNumberCounter;
+
+                            // IF inside Case
+                            if (CaseName != "")
+                            {
+                                usages.CaseName = CaseName;
+                            }
+                            variable.Usages.Add(usages);
+                        }
+                    }
+                }
+            }
+        }
+
+
+
+        // each is left: write, assignment && right: read, assignment
+
+        // examples: 
+           // MotorX.MC_Halt.Execute := FALSE;
+           // iLastState := 25;
+           // MotorX.MC_MoveRelative.Distance := (iCount - 1)*rWidth + (iCount - 1)*10 - MotorX.MC_ReadActualPosition.Position;
+           // bBlinker := NOT bBlinker;  
+
+        public void extract_Assignment_Expression(string line)
+        {
+
+            string assignPattern = @"^\s*(.*?)\s*:=\s*(.*?)\s*;?$";
+
+            Match match = Regex.Match(line, assignPattern);
+
+            if (match.Success)
+            {
+                string leftSide = match.Groups[1].Value.Trim();
+                string rightSide = match.Groups[2].Value.Trim();
+
+
+                // LEFT:
+                if (leftSide.Contains("."))
+                {
+                    leftSide = leftSide.Split('.')[0];
+                }
+
+                foreach (var variable in variables)
+                {
+                    if (leftSide == variable.Name)
+                    {
+                        VariableUsage usages = new VariableUsage();
+
+                        usages.Variable = variable; // do i need this?
+                        usages.usageType = UsageType.Write;
+                        usages.usageContext = UsageContext.Assignment;
+
+                        usages.lineNumber = LineNumberCounter;
+                        if (CaseName != "")
+                        {
+                            usages.CaseName = CaseName;
+                        }
+                        variable.Usages.Add(usages);
+                        break;
+                    }
+                }
+
+
+                // RIGHT:
+                List<string> rightSides = new List<string>();
+                string assignmentPattern = @"\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\b";
+
+                MatchCollection matches = Regex.Matches(rightSide, assignmentPattern);
+
+                foreach(Match m in  matches)
+                {
+                    rightSides.Add(m.Value);
+                }
+                // for rightSide: (iCount - 1)*rWidth + (iCount - 1)*10 - MotorX.MC_ReadActualPosition.Position
+                // rightSides list will be: iCount, rWidth, iCount, rWidth, MotorX.MC_ReadActualPosition.Position
+
+                foreach (var variable in variables)
+                {
+                    for (int i = 0; i < rightSides.Count; i++)
+                    {
+                        if (rightSides[i].Contains("."))
+                        {
+                            rightSides[i] = rightSides[i].Split('.')[0];
+                        }
+
+                        VariableUsage usages = new VariableUsage();
+
+                        if (rightSides[i] == variable.Name)
+                        {
+                            //usages.Variable = variable; // ?
+                            usages.usageType = UsageType.Read;
+                            usages.usageContext = UsageContext.Assignment;
+                            usages.lineNumber = LineNumberCounter;
+
+                            // IF inside Case
+                            if (CaseName != "")
+                            {
+                                usages.CaseName = CaseName;
+                            }
+                            variable.Usages.Add(usages);
+                        }
+                    }
+                }
+            }
+
         }
 
 
 
 
-        // possible assignments:
-        // x := y     x - write, y - read / assignment
-        // x := y()   x - write/assignment, y-read/functionalCall
-        // x := y(a)  x - write/assignment, y-read/functionalCall, a-read/functionArgument
-        // x.a := y   x.a - write/assignment
-        private void extract_Assignment_Expression(string line)
+
+        public void extract_IF_Expression(string line)
         {
-            //throw new NotImplementedException();
-        }
-
-
-
-
-
-        public void extract_IF_Expression(string line, string caseName)
-        {
-            string CaseName = caseName;
             string IfPattern = @"^(?:IF|ELSIF)\s*(.+?)\s*THEN";
 
             Match matchIfPattern = Regex.Match(line, IfPattern);
@@ -406,10 +555,13 @@ namespace TwinCatAnalysis.Models
             }
             // what kind of CASE are possible? (in my example only with variable)
         }
-
-
     }
-
 }
+
+// TODO:
+// i could make one function for those code of line that are repeating
+// i only have case name, should i have something else to remember, like statement or idk?
+// usages.Variable = variable; // yes or no?
+// PRG_CNCPlasma(); -> method call, i already have class, how to handle?
 
 
