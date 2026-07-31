@@ -59,8 +59,7 @@ namespace TwinCatAnalysis
             
 
 
-            // TODO::
-            //gridControl1.Refresh();
+            
 
 
 

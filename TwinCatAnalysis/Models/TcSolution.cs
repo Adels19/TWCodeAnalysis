@@ -48,7 +48,7 @@ namespace TwinCatAnalysis.Models
             {
                 foreach(var file in project.PlcProjects.allFiles)
                 {
-                    foreach(var v in file.variables)    
+                    foreach(var v in file.Variables)    
                     {
                         variables.Add(v);
                     }

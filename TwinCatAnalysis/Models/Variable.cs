@@ -23,49 +23,11 @@ namespace TwinCatAnalysis.Models
         public List<VariableUsage> Usages { get; set; } = new List<VariableUsage>();
 
     }
+    //public class MethodUsage
+    //{
+    //    public string Name { get; set; }
+    //    public string Context { get; set; }
+    //    public string Line { get; set; }
 
-
-
-    public enum UsageType
-    {
-        Read,
-        Write,
-        Call
-    }
-
-    public enum UsageContext
-    {
-        Assignment,
-        CaseCondition,
-        FunctionArgument,
-        FunctionalCall,
-        IfCondition
-    }
-
-    public class VariableUsage
-    {
-        public Variable Variable { get; set; }  // it stores the reference to the existing Variable
-        public UsageType usageType { get; set; }
-        public UsageContext usageContext { get; set; }
-        public int lineNumber { get; set; }
-        public string CaseName { get; set; }
-
-
-    }
-
-    public class MethodUsage
-    {
-        public string Name { get; set; }
-        public string Context { get; set; }
-        public string Line { get; set; }
-
-    }
-
-
-
-
-
-
-
-
+    //}
 }
