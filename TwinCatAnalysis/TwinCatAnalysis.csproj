@@ -126,6 +126,7 @@
   <ItemGroup>
     <Compile Include="Core\ProjectLoader.cs" />
     <Compile Include="Core\SolutionLoader.cs" />
+    <Compile Include="DiagramBuilder.cs" />
     <Compile Include="Form1.cs">
       <SubType>Form</SubType>
     </Compile>

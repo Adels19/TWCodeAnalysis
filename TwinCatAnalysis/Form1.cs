@@ -35,17 +35,21 @@ namespace TwinCatAnalysis
             OpenFileDialog openFileDialog = new OpenFileDialog();
             
             var res = openFileDialog.ShowDialog();
+
             if (res == DialogResult.OK)
             {
                 projectPath = openFileDialog.FileName;
 
                 ProjectLoader loader = new ProjectLoader();
+
                 TcSolution solution = loader.Load(projectPath);
 
                 UiVariables = solution.GetAllVariables();
 
                 gridControl1.DataSource = UiVariables;
 
+                DiagramBuilder builder = new DiagramBuilder(diagramControl);
+                builder.Build(UiVariables);
 
                 // gridView1 features
                 gridView1.Columns["Name"].Caption = "Variable Name";
@@ -54,15 +58,13 @@ namespace TwinCatAnalysis
 
                 gridView1.OptionsView.ShowAutoFilterRow = true;
                 //gridView1.OptionsView.ShowGroupPanel = true;
+
+                //tabNavigationPage1.PageText = "Variables";
+                //tabNavigationPage2.PageText = "Dependency Graph";
             }
 
-            
-
-
-            
-
-
-
         }
+
+        
     }
 }

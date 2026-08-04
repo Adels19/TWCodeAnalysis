@@ -87,21 +87,21 @@
             this.tabNavigationPage1,
             this.tabNavigationPage2});
             this.tabPane1.RegularSize = new System.Drawing.Size(579, 523);
-            this.tabPane1.SelectedPage = this.tabNavigationPage2;
+            this.tabPane1.SelectedPage = this.tabNavigationPage1;
             this.tabPane1.Size = new System.Drawing.Size(579, 523);
             this.tabPane1.TabIndex = 2;
             this.tabPane1.Text = "tabPane1";
             // 
             // tabNavigationPage1
             // 
-            this.tabNavigationPage1.Caption = "tabNavigationPage1";
+            this.tabNavigationPage1.Caption = "Variables";
             this.tabNavigationPage1.Controls.Add(this.gridControl1);
             this.tabNavigationPage1.Name = "tabNavigationPage1";
             this.tabNavigationPage1.Size = new System.Drawing.Size(579, 490);
             // 
             // tabNavigationPage2
             // 
-            this.tabNavigationPage2.Caption = "tabNavigationPage2";
+            this.tabNavigationPage2.Caption = "Graph";
             this.tabNavigationPage2.Controls.Add(this.diagramControl);
             this.tabNavigationPage2.Name = "tabNavigationPage2";
             this.tabNavigationPage2.Size = new System.Drawing.Size(579, 490);

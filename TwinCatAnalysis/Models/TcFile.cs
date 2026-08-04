@@ -106,8 +106,52 @@ namespace TwinCatAnalysis.Models
         }
         #endregion
 
+        #region Line Preprocessing
+        private bool insideBlockComment = false;
+        private string RemoveComments(string line)
+        {
+            if (insideBlockComment)
+            {
+                int end = line.IndexOf("*)");
 
-       
+                if (end == -1)
+                    return string.Empty;
+
+                line = line.Substring(end + 2);
+
+                insideBlockComment = false;
+            }
+
+
+            while (true)
+            {
+                int start = line.IndexOf("(*");
+
+                if (start == -1)
+                    break;
+
+                int end = line.IndexOf("*)", start + 2);
+
+                if (end == -1)
+                {
+                    insideBlockComment = true;
+                    line = line.Substring(0, start);
+                    break;
+                }
+
+                line = line.Remove(start, end - start + 2);
+            }
+
+            int single = line.IndexOf("//");
+            if (single >= 0)
+            {
+                line = line.Substring(0, single);
+            }
+
+            return line.Trim();
+        }
+
+        #endregion
 
 
         #region Declaration Analysis
@@ -168,6 +212,7 @@ namespace TwinCatAnalysis.Models
         #region Implementation Analysis
         private void AnalyzeImplementation()
         {
+            CurrentLineNumber = 1;
 
             StringReader reader = new StringReader(ImplementationText);
             string line;
@@ -176,28 +221,32 @@ namespace TwinCatAnalysis.Models
 
             while ((line = reader.ReadLine()) != null)
             {
-                line = line.Trim();
+                line = RemoveComments(line);
+                if (string.IsNullOrWhiteSpace(line))
+                {
+                    CurrentLineNumber++;
+                    continue;
+                }
 
-                bool IsComment = line.Contains("//") || line.Contains("*)") || line.Contains("*(");
 
-                if (line.StartsWith("CASE") && !IsComment)
+                if (line.StartsWith("CASE"))
                 {
                     CurrentCase = line;
                     AnalyzeCaseStatement(line);
                 }
-                else if (line.StartsWith("END_CASE") && !IsComment)
+                else if (line.StartsWith("END_CASE"))
                 {
                     CurrentCase = "";
                 }
 
                 // IF, ELSIF, ELSE
-                else if ((line.StartsWith("IF") || line.StartsWith("ELSIF")) && !IsComment)
+                else if ((line.StartsWith("IF") || line.StartsWith("ELSIF")))
                 {
                     AnalyzeIfStatement(line);
                 }
 
                 // Functions, Arguments...
-                else if ((line.Contains(":=") || line.Contains("=>")) && !IsComment)
+                else if ((line.Contains(":=") || line.Contains("=>")))
                 {
                     int parenthesisDepth = 0;
 
@@ -242,10 +291,6 @@ namespace TwinCatAnalysis.Models
 
 
         #region Statement Analysis
-
-        // public void FindBiggestNumber()
-        // private int _counter;
-
         private void AnalyzeCaseStatement(string line)
         {
             // pr. line = CASE iStateFB OF, different then CASE iState OF
@@ -381,24 +426,24 @@ namespace TwinCatAnalysis.Models
                     leftSide = leftSide.Split('.')[0];
                 }
 
-                foreach (var variable in Variables)
+                Variable variable = FindVariable(leftSide);
+
+                if (variable != null)
                 {
-                    if (leftSide == variable.Name)
+                    VariableUsage usages = new VariableUsage();
+
+                    usages.Variable = variable; // do i need this?
+                    usages.usageType = UsageType.Write;
+                    usages.usageContext = UsageContext.Assignment;
+
+                    usages.lineNumber = CurrentLineNumber;
+
+                    if (CurrentCase != "")
                     {
-                        VariableUsage usages = new VariableUsage();
-
-                        usages.Variable = variable; // do i need this?
-                        usages.usageType = UsageType.Write;
-                        usages.usageContext = UsageContext.Assignment;
-
-                        usages.lineNumber = CurrentLineNumber;
-                        if (CurrentCase != "")
-                        {
-                            usages.CaseName = CurrentCase;
-                        }
-                        variable.Usages.Add(usages);
-                        break;
+                        usages.CaseName = CurrentCase;
                     }
+                    variable.Usages.Add(usages);
+
                 }
 
 
@@ -414,36 +459,35 @@ namespace TwinCatAnalysis.Models
                 }
                 // for rightSide: (iCount - 1)*rWidth + (iCount - 1)*10 - MotorX.MC_ReadActualPosition.Position
                 // rightSides list will be: iCount, rWidth, iCount, rWidth, MotorX.MC_ReadActualPosition.Position
+                
+                
+                 for (int i = 0; i < rightSides.Count; i++)
+                 {
+                     if (rightSides[i].Contains("."))
+                     {
+                         rightSides[i] = rightSides[i].Split('.')[0];
+                     }
 
-                foreach (var variable in Variables)
-                {
-                    for (int i = 0; i < rightSides.Count; i++)
-                    {
-                        if (rightSides[i].Contains("."))
-                        {
-                            rightSides[i] = rightSides[i].Split('.')[0];
-                        }
+                 Variable var = FindVariable(rightSides[i]);
 
+
+                     if (var != null)
+                     {
                         VariableUsage usages = new VariableUsage();
 
-                        if (rightSides[i] == variable.Name)
-                        {
-                            //usages.Variable = variable; // ?
-                            usages.usageType = UsageType.Read;
-                            usages.usageContext = UsageContext.Assignment;
-                            usages.lineNumber = CurrentLineNumber;
+                        usages.Variable = var;
+                        usages.usageType = UsageType.Read;
+                        usages.usageContext = UsageContext.Assignment;
+                        usages.lineNumber = CurrentLineNumber;
 
-                            // IF inside Case
-                            if (CurrentCase != "")
-                            {
-                                usages.CaseName = CurrentCase;
-                            }
-                            variable.Usages.Add(usages);
-                        }
-                    }
-                }
+                         if (CurrentCase != "")
+                         {
+                             usages.CaseName = CurrentCase;
+                         }
+                         var.Usages.Add(usages);
+                     }
+                 }
             }
-
         }
         private void AnalyzeFunctionCall(string line)
         {
@@ -470,22 +514,22 @@ namespace TwinCatAnalysis.Models
                 {
                     functionCall = functionCall.Split('.')[0];
                 }
-                foreach (var variable in Variables)
+
+                Variable variable = FindVariable(functionCall);
+
+                
+                if (variable != null)
                 {
-                    if (functionCall == variable.Name)
-                    {
-                        VariableUsage usages = new VariableUsage();
+                    VariableUsage usages = new VariableUsage();
 
-                        usages.Variable = variable;
-                        usages.usageType = UsageType.Read;
-                        usages.usageContext = UsageContext.FunctionalCall;
-                        //usages.CaseName = line;
-                        usages.lineNumber = CurrentLineNumber;
+                    usages.Variable = variable;
+                    usages.usageType = UsageType.Read;
+                    usages.usageContext = UsageContext.FunctionalCall;
+                    usages.lineNumber = CurrentLineNumber;
 
-                        variable.Usages.Add(usages);
-                        break;
-                    }
+                    variable.Usages.Add(usages);
                 }
+                
 
 
                 // right side ARGUMENTS - example:
@@ -507,28 +551,28 @@ namespace TwinCatAnalysis.Models
                         rightSide = rightSide.Split('.')[0];
                     }
 
-                    foreach (var variable in Variables)
+                    Variable var = FindVariable(rightSide);
+
+
+                    if (var != null)
                     {
-                        if (rightSide == variable.Name)
+                         VariableUsage usages = new VariableUsage();
+
+                        usages.Variable = var;
+                        usages.usageContext = UsageContext.FunctionArgument;
+                        usages.lineNumber = CurrentLineNumber;
+
+                        if (op == ":=")
+                            usages.usageType = UsageType.Read;
+                        else
+                            usages.usageType = UsageType.Write;
+
+                        if (CurrentCase != "")
                         {
-                            VariableUsage usages = new VariableUsage();
-
-                            usages.usageContext = UsageContext.FunctionArgument;
-                            usages.lineNumber = CurrentLineNumber;
-
-                            if (op == ":=")
-                                usages.usageType = UsageType.Read;
-                            else
-                                usages.usageType = UsageType.Write;
-
-                            if (CurrentCase != "")
-                            {
-                                usages.CaseName = CurrentCase;
-                            }
-
-                            variable.Usages.Add(usages);
-                            break;
+                            usages.CaseName = CurrentCase;
                         }
+
+                        var.Usages.Add(usages);
                     }
                 }
             }
@@ -562,5 +606,9 @@ namespace TwinCatAnalysis.Models
 // i only have case name, should i have something else to remember, like statement or idk?
 // usages.Variable = variable; // yes or no?
 // PRG_CNCPlasma(); -> method call, i already have class, how to handle?
+
+
+
+// also continue with the FindVariable in other functions: functioncall and assignment
 
 
