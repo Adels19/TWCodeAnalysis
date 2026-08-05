@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 
 namespace TwinCatAnalysis.Models
 {
@@ -16,6 +17,7 @@ namespace TwinCatAnalysis.Models
         public string Scope { get; set; }
 
         public int usageCount { get { return Usages.Count; } }
+
 
 
         //public string comment { get; set; }

@@ -41,7 +41,6 @@ namespace TwinCatAnalysis.Models
         
         public List<Variable> GetAllVariables()
         {
-           
             List<Variable> variables = new List<Variable>();
 
             foreach (var project in Projects)
