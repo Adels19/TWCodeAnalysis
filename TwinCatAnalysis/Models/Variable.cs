@@ -25,6 +25,17 @@ namespace TwinCatAnalysis.Models
         public List<VariableUsage> Usages { get; set; } = new List<VariableUsage>();
 
     }
+
+    public class VariableInstance
+    {
+        public string InstanceName { get; set; }
+        public string InstanceType { get; set; }
+        public string DefinitionSource { get; set; }
+        public string Scope { get; set; }
+
+        public List<VariableUsage> Usages { get; set; } = new List<VariableUsage>();
+    }
+
     //public class MethodUsage
     //{
     //    public string Name { get; set; }

@@ -26,6 +26,8 @@ namespace TwinCatAnalysis
             gridControl1.DataSource = UiVariables;
 
             diagramBuilder = new DiagramBuilder(diagramControl);
+
+
         }
 
         // we save here the path so later we will set and send to other classes
@@ -34,6 +36,7 @@ namespace TwinCatAnalysis
         public List<Variable> UiVariables { get; set; } = new List<Variable>();
 
         private DiagramBuilder diagramBuilder;
+       
 
         private void btnOpenProject_Click(object sender, EventArgs e)
         {
@@ -67,18 +70,15 @@ namespace TwinCatAnalysis
                 //tabNavigationPage2.PageText = "Dependency Graph";
 
                 //diagramBuilder.BuildFile();
+                diagramBuilder.BuildDependencies(UiVariables);
+                
 
             }
         }
 
-        private void gridView1_FocusedRowChanged(object sender, DevExpress.XtraGrid.Views.Base.FocusedRowChangedEventArgs e)
+        private void Form1_Load(object sender, EventArgs e)
         {
-            Variable selectedVariable = gridView1.GetFocusedRow() as Variable;
 
-            if (selectedVariable != null)
-            {
-                diagramBuilder.BuildFile(selectedVariable.DefinitionSource, UiVariables);
-            }
         }
     }
 }
