@@ -52,14 +52,23 @@ namespace TwinCatAnalysis.Models
                     string fullFilePath = Path.Combine(projectDirectory, includePath);  
                     // absoulte path to the file, combining the current dir with the file we found
 
-                    TcFile file = new TcFile { FilePath = fullFilePath, FileName = FileName, FileType = FileExtension };
+                    TcFile file = new TcFile { 
+                        FilePath = fullFilePath, 
+                        FileName = FileName, 
+                        FileType = FileExtension, 
+                        Project = this 
+                    };
 
-                    file.LoadXML();
+                   
                     allFiles.Add(file);
 
                     //string FilePath = Path.GetFullPath(includePath);    // "C:\\repos\\TWCodeAnalysis\\TwinCatAnalysis\\bin\\Debug\\DUTs\\ST_Axis.TcDUT"
 
                 }
+            }
+            foreach(TcFile file in allFiles)
+            {
+                file.LoadXML();
             }
         }
     }

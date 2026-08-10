@@ -23,39 +23,36 @@ namespace TwinCatAnalysis
         }
 
 
-        public void Build(List<Variable> variables)
-        {
-            diagramControl.Items.Clear();
+        //public void Build(List<Variable> variables)
+        //{
+        //    diagramControl.Items.Clear();
 
-            int x = 50;
-            int y = 50;
+        //    int x = 50;
+        //    int y = 50;
 
-            foreach (var variable in variables)
-            {
-                DiagramShape shape = new DiagramShape();
+        //    foreach (var variable in variables)
+        //    {
+        //        DiagramShape shape = new DiagramShape();
 
-                shape.Content = variable.Name;
-                shape.Position = new PointFloat(x, y);
-                shape.Width = 150;
-                shape.Height = 50;
+        //        shape.Content = variable.Name;
+        //        shape.Position = new PointFloat(x, y);
+        //        shape.Width = 150;
+        //        shape.Height = 50;
 
-                diagramControl.Items.Add(shape);
+        //        diagramControl.Items.Add(shape);
 
-                y += 70;
-            }
+        //        y += 70;
+        //    }
 
-            //diagramControl.FitToDrawing();
-        }
+        //    //diagramControl.FitToDrawing();
+        //}
 
        // TODO:
        // MAKE GOOD LOOKING DIAGRAM CONTROL, especially the properties - margins, space etc..
 
         public void BuildDependencies(List<Variable> variables)
         {
-
             
-
-
             diagramControl.Items.Clear();
 
             var groups = variables.GroupBy(v => v.DefinitionSource);
@@ -224,6 +221,58 @@ namespace TwinCatAnalysis
             //    diagramControl.FitToDrawing();
             //}
 
+        }
+
+
+        public void Build(List<TcFile> files)
+        {
+            diagramControl.Items.Clear();
+
+            Dictionary<TcFile, DiagramShape> nodes =
+                new Dictionary<TcFile, DiagramShape>();
+
+            int x = 50;
+            int y = 50;
+
+            foreach (TcFile file in files)
+            {
+                DiagramShape node = new DiagramShape();
+
+                node.Content = file.FileName;
+                node.Position = new PointFloat(x, y);
+                node.Width = 180;
+                node.Height = 60;
+
+                node.Appearance.BackColor = Color.FromArgb(52, 73, 94);
+                node.Appearance.ForeColor = Color.White;
+                node.Appearance.BorderSize = 2;
+
+                diagramControl.Items.Add(node);
+
+                nodes.Add(file, node);
+
+                y += 100;
+            }
+
+
+            foreach (TcFile file in files)
+            {
+                foreach(TcFile.CodeDependency dependency in file.Dependencies)
+                {
+                    if (!nodes.ContainsKey(dependency.From) || !nodes.ContainsKey(dependency.To))
+                    {
+                        continue;
+                    }
+
+                    DiagramConnector connector = new DiagramConnector();
+
+                    connector.BeginItem = nodes[dependency.From];
+                    connector.EndItem = nodes[dependency.To];
+
+                    diagramControl.Items.Add(connector);
+                }
+            }
+            diagramControl.FitToDrawing();
         }
     }
 }

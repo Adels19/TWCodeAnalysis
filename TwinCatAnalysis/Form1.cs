@@ -1,4 +1,5 @@
-﻿using DevExpress.Utils;
+﻿using DevExpress.Diagram.Core;
+using DevExpress.Utils;
 using DevExpress.XtraDiagram;
 using DevExpress.XtraVerticalGrid.Events;
 using Microsoft.Build.Construction;
@@ -27,7 +28,7 @@ namespace TwinCatAnalysis
 
             diagramBuilder = new DiagramBuilder(diagramControl);
 
-
+            dependencyDiagramBuilder = new DiagramBuilder(diagramControl1);
         }
 
         // we save here the path so later we will set and send to other classes
@@ -36,7 +37,9 @@ namespace TwinCatAnalysis
         public List<Variable> UiVariables { get; set; } = new List<Variable>();
 
         private DiagramBuilder diagramBuilder;
-       
+        private DiagramBuilder dependencyDiagramBuilder;
+        private TcSolution solution;
+
 
         private void btnOpenProject_Click(object sender, EventArgs e)
         {
@@ -51,7 +54,7 @@ namespace TwinCatAnalysis
 
                 ProjectLoader loader = new ProjectLoader();
 
-                TcSolution solution = loader.Load(projectPath);
+                solution = loader.Load(projectPath);
 
                 UiVariables = solution.GetAllVariables();
 
@@ -71,7 +74,8 @@ namespace TwinCatAnalysis
 
                 //diagramBuilder.BuildFile();
                 diagramBuilder.BuildDependencies(UiVariables);
-                
+
+                dependencyDiagramBuilder.Build(solution.Projects[0].PlcProjects.allFiles);
 
             }
         }

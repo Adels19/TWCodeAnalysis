@@ -1,4 +1,5 @@
-﻿using DevExpress.Drawing.Internal.Fonts.Interop;
+﻿using DevExpress.Data.Utils;
+using DevExpress.Drawing.Internal.Fonts.Interop;
 using DevExpress.Export.Xl;
 using DevExpress.Utils;
 using System;
@@ -33,11 +34,20 @@ namespace TwinCatAnalysis.Models
         public XDocument Document { get; set; }
 
         public List<Variable> Variables { get; set; } = new List<Variable>();
-
         public string DeclarationText { get; set; }
         public string ImplementationText { get; set; }
+        public TcPlcProject Project { get; set; }
 
         #endregion
+
+        public class CodeDependency
+        {
+            public TcFile From { get; set; }
+            public TcFile To { get; set; }
+
+            public string DependencyType { get; set; }
+        }
+        public List<CodeDependency> Dependencies { get; set; } = new List<CodeDependency>();
 
 
         #region Analysis State
@@ -197,9 +207,18 @@ namespace TwinCatAnalysis.Models
                         Variable variable = new Variable();
 
                         variable.Name = match.Groups[1].Value;
-                        variable.Type = match.Groups[2].Value;
+                        variable.Type = match.Groups[2].Value; ;
                         variable.Scope = scope;
                         variable.StartingValue = match.Groups[3].Value;
+
+                        // if type is equal to a file name
+                        TcFile definitionFile = FindFile(variable.Type);
+
+                        if (definitionFile != null)
+                        {
+                            variable.isInstance = true;
+                            variable.InstanceDefinitionSource = definitionFile.FileName;
+                        }
 
                         variable.DefinitionSource = Path.GetFileNameWithoutExtension(FileName);
                         Variables.Add(variable);
@@ -207,6 +226,8 @@ namespace TwinCatAnalysis.Models
                 }
             }
         }
+
+        
         #endregion
 
         #region Implementation Analysis
@@ -283,9 +304,39 @@ namespace TwinCatAnalysis.Models
                         }
                     }
                 }
-                CurrentLineNumber++;
+                else
+                {
+                    AnalyzePoucCall(line);
+
+                }
+                    CurrentLineNumber++;
             }
         }
+
+        private void AnalyzePoucCall(string line)
+        {
+            string pattern = @"^\s*([A-Za-z_]\w*)\s*\(\s*\)\s*;?$";
+
+            Match match = Regex.Match(line, pattern);
+
+            if (match != null)
+            {
+                string name = match.Groups[1].Value;
+                TcFile calledFile = FindFile(name);
+
+                if (calledFile != null)
+                {
+                    CodeDependency dependency = new CodeDependency();
+                    dependency.From = this;
+                    dependency.To = calledFile;
+                    dependency.DependencyType = "ProgramCall";
+
+                    Dependencies.Add(dependency);
+                    // {TwinCatAnalysis.Models.TcFile} -> .FileName returns the name of the file, even if they are both objects
+                }
+            }
+        }
+
         #endregion
 
 
@@ -316,7 +367,7 @@ namespace TwinCatAnalysis.Models
 
                     if (variable != null)
                     {
-                        usages.Variable = variable; // do i need this?
+                        usages.Variable = variable; 
                         usages.usageType = UsageType.Read;
                         usages.usageContext = UsageContext.CaseCondition;
                         usages.CaseName = line;
@@ -365,9 +416,12 @@ namespace TwinCatAnalysis.Models
                 if (variable != null)
                 {
                     VariableUsage usages = new VariableUsage();
+
                     usages.usageType = UsageType.Read;
                     usages.usageContext = UsageContext.IfCondition;
                     usages.lineNumber = CurrentLineNumber;
+                    usages.Variable = variable; 
+
 
                     // IF inside Case
                     if (CurrentCase != "")
@@ -594,6 +648,11 @@ namespace TwinCatAnalysis.Models
         private Variable FindVariable(string name)
         {
             return Variables.FirstOrDefault(v => v.Name == name);
+        }
+        private TcFile FindFile(string type)
+        {
+            return Project.allFiles.FirstOrDefault(f =>
+                Path.GetFileNameWithoutExtension(f.FileName) == type);
         }
 
 

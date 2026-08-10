@@ -19,8 +19,10 @@ namespace TwinCatAnalysis.Models
         public int usageCount { get { return Usages.Count; } }
 
 
+        // instance
+        public bool isInstance { get; set; }
+        public string InstanceDefinitionSource { get; set; }
 
-        //public string comment { get; set; }
 
         public List<VariableUsage> Usages { get; set; } = new List<VariableUsage>();
 
