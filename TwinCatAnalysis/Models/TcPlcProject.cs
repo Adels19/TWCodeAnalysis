@@ -13,63 +13,73 @@ namespace TwinCatAnalysis.Models
     // .plcproj — has a path, list of TcFiles (POU/GVL/DUT)
     public class TcPlcProject
     {
+        #region Properties
+        public string FilePath { get; set; }    
+        public List<TcFile> AllFiles { get; set; } = new List<TcFile>();
+        public XDocument Document { get; set; }
 
-        public string name { get; set; }    
-        public string FilePath { get; set; }    // "C:\\plc_project\\CNCPlasma\\CNCPlasma\\CNCPlasma\\CNCPlasma.plcproj" -> Where is the PLC project file itself?
-        public List<TcFile> allFiles { get; set; } = new List<TcFile>();
+        #endregion
 
-
-
-        public XDocument doc { get; set; }
-
-
+        #region Constructor
 
         public TcPlcProject() 
         {
-            allFiles = new List<TcFile>();
+            AllFiles = new List<TcFile>();
           
         }
+
+        #endregion
+
+        #region Methods
+
+        /// <summary>
+        /// Loads the PLC project file, creates TcFile objects
+        /// for all included files, and loads their XML data.
+        /// </summary>
         public void Load()
         {
 
             var projectDirectory = Path.GetDirectoryName(FilePath);
 
-            doc = XDocument.Load(FilePath);
-            var CompileParts = doc.Descendants().Where(x => x.Name.LocalName == "Compile");
+            Document = XDocument.Load(FilePath);
 
-            foreach (var x in CompileParts)
+            var compileParts = Document.Descendants().Where(x => x.Name.LocalName == "Compile");
+
+            // Add all included files to the list
+            foreach (var x in compileParts)
             {
 
-                var hasInclude = x.Attribute("Include");    // {Include="DUTs\ST_Axis.TcDUT"}
+                var includeAttribute = x.Attribute("Include");    // {Include="DUTs\ST_Axis.TcDUT"}
 
-                if (hasInclude != null)
+                if (includeAttribute != null)
                 {
-                    
-                    string includePath = hasInclude.Value; // "DUTs\\ST_Axis.TcDUT"
+                    string includePath = includeAttribute.Value; 
 
-                    string FileName = Path.GetFileName(includePath);    // "ST_Axis.TcDUT"
-                    string FileExtension = Path.GetExtension(includePath);  // .TcDUT
-                    string fullFilePath = Path.Combine(projectDirectory, includePath);  
+                    string fileName = Path.GetFileName(includePath);   
+                    string fileExtension = Path.GetExtension(includePath);
+
                     // absoulte path to the file, combining the current dir with the file we found
+                    string fullFilePath = Path.Combine(projectDirectory, includePath);  
 
-                    TcFile file = new TcFile { 
+                    var file = new TcFile { 
                         FilePath = fullFilePath, 
-                        FileName = FileName, 
-                        FileType = FileExtension, 
+                        FileName = fileName, 
+                        FileType = fileExtension, 
                         Project = this 
                     };
 
-                   
-                    allFiles.Add(file);
 
-                    //string FilePath = Path.GetFullPath(includePath);    // "C:\\repos\\TWCodeAnalysis\\TwinCatAnalysis\\bin\\Debug\\DUTs\\ST_Axis.TcDUT"
-
+                    AllFiles.Add(file);
                 }
             }
-            foreach(TcFile file in allFiles)
+
+            // Load XML data for all project files
+            foreach (TcFile file in AllFiles)
             {
                 file.LoadXML();
             }
         }
+
+        #endregion
     }
 }

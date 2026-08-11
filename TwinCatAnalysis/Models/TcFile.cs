@@ -30,76 +30,86 @@ namespace TwinCatAnalysis.Models
         public string FilePath { get; set; }
         public string FileName { get; set; }
         public string FileType { get; set; }
-
         public XDocument Document { get; set; }
-
         public List<Variable> Variables { get; set; } = new List<Variable>();
         public string DeclarationText { get; set; }
         public string ImplementationText { get; set; }
         public TcPlcProject Project { get; set; }
+        public List<CodeDependency> Dependencies { get; set; } = new List<CodeDependency>();
 
         #endregion
 
+        #region Nested Classes
         public class CodeDependency
         {
             public TcFile From { get; set; }
             public TcFile To { get; set; }
-
             public string DependencyType { get; set; }
         }
-        public List<CodeDependency> Dependencies { get; set; } = new List<CodeDependency>();
+
+        #endregion
 
 
         #region Analysis State
         private int CurrentLineNumber { get; set; } = 1;
         private string CurrentCase { get; set; } = "";
+        private bool InsideBlockComment {get; set;}
+
         #endregion
 
 
         #region XML Extraction
+
+        /// <summary>
+        /// Loads the XML document and extracts the relevant data
+        /// based on the file type.
+        /// </summary>
         public void LoadXML()
         {
-            Document = XDocument.Load(FilePath); // "C:\\plc_project\\CNCPlasma\\CNCPlasma\\CNCPlasma\\POUs\\FB_Blinker.TcPOU"
+            Document = XDocument.Load(FilePath); 
+
             if (FileType == ".TcPOU")
             {
                 ExtractPOU();
             }
-            else if (FileType == ".TcDUT")
-            {
-                ExtractDUT();
-            }
-            else if (FileType == ".TcGVL")
-            {
-                ExtractGVL();
-            }
+            //else if (FileType == ".TcDUT")
+            //{
+            //    ExtractDUT();
+            //}
+            //else if (FileType == ".TcGVL")
+            //{
+            //    ExtractGVL();
+            //}
         }
+
+        /// <summary>
+        /// Extracts declaration and implementation sections 
+        /// from a TwinCAT POU file. 
+        /// </summary>
         private void ExtractPOU()
         {
-            var declaration = Document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Declaration");
-            var implementation = Document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Implementation");
+            var declaration = Document
+                .Descendants()
+                .FirstOrDefault(x => x.Name.LocalName == "Declaration");
 
-            var method = Document.Descendants().FirstOrDefault(x => x.Name.LocalName == "Method");
+            var implementation = Document
+                .Descendants()
+                .FirstOrDefault(x => x.Name.LocalName == "Implementation");
+
 
             if (declaration != null)
             {
                 DeclarationText = declaration.Value;
                 AnalyzeDeclaration();
             }
+
             if (implementation != null)
             {
                 ImplementationText = implementation.Value;
                 AnalyzeImplementation();
             }
-            //if (method != null)
-            //{
-            //    var methodName = method.Attribute("Name")?.Value;
-            //    Method m = new Method();
-            //    m.Name = methodName;
-
-            //    Methods.Add(m);
-
-            //}
         }
+
         private void ExtractDUT()
         {
             //var declaration = doc.Descendants().FirstOrDefault(x => x.Name.LocalName == "Declaration");
@@ -117,10 +127,15 @@ namespace TwinCatAnalysis.Models
         #endregion
 
         #region Line Preprocessing
-        private bool insideBlockComment = false;
+
+        /// <summary> 
+        /// Removes block and single-line comments from a line of code. 
+        /// </summary> 
+        /// <param name="line"> The line of code to process.</param> 
+        /// <returns>The line with comments removed.</returns>
         private string RemoveComments(string line)
         {
-            if (insideBlockComment)
+            if (InsideBlockComment)
             {
                 int end = line.IndexOf("*)");
 
@@ -129,7 +144,7 @@ namespace TwinCatAnalysis.Models
 
                 line = line.Substring(end + 2);
 
-                insideBlockComment = false;
+                InsideBlockComment = false;
             }
 
 
@@ -144,7 +159,7 @@ namespace TwinCatAnalysis.Models
 
                 if (end == -1)
                 {
-                    insideBlockComment = true;
+                    InsideBlockComment = true;
                     line = line.Substring(0, start);
                     break;
                 }
@@ -152,10 +167,11 @@ namespace TwinCatAnalysis.Models
                 line = line.Remove(start, end - start + 2);
             }
 
-            int single = line.IndexOf("//");
-            if (single >= 0)
+            int singleLineComment = line.IndexOf("//");
+
+            if (singleLineComment >= 0)
             {
-                line = line.Substring(0, single);
+                line = line.Substring(0, singleLineComment);
             }
 
             return line.Trim();
@@ -165,16 +181,15 @@ namespace TwinCatAnalysis.Models
 
 
         #region Declaration Analysis
+
+        /// <summary>
+        /// Analyzes the declaration section of the file
+        /// and creates variables from the declared entries.
+        /// </summary>
         private void AnalyzeDeclaration()
         {
-            //string Comment;
-
-            // Name : Type;
-            // Name : Type := Value;
-            // := ? 
-            // value is optional
-
-            StringReader reader = new StringReader(DeclarationText);
+   
+            var reader = new StringReader(DeclarationText);
 
             string line;
             string currentScope = "";
@@ -182,36 +197,33 @@ namespace TwinCatAnalysis.Models
 
             while ((line = reader.ReadLine()) != null)
             {
-
                 line = line.Trim();
 
                 if (line.StartsWith("VAR"))
                 {
                     currentScope = line;
                     scope = line;
-
                 }
                 else if (line.Contains("END_VAR"))
                 {
                     currentScope = "";
                 }
-
+                // inside scope
                 else if (currentScope != "")
                 {
-
                     string pattern = @"^\s*(\w+)\s*:\s*(\w+)(?:\s*:=\s*(\w+))?\s*;";
                     Match match = Regex.Match(line, pattern);
 
                     if (match.Success)
                     {
-                        Variable variable = new Variable();
+                        var variable = new Variable();
 
                         variable.Name = match.Groups[1].Value;
-                        variable.Type = match.Groups[2].Value; ;
+                        variable.Type = match.Groups[2].Value; 
                         variable.Scope = scope;
                         variable.StartingValue = match.Groups[3].Value;
 
-                        // if type is equal to a file name
+                        // If the type matches a file name, the variable is an instance.
                         TcFile definitionFile = FindFile(variable.Type);
 
                         if (definitionFile != null)
@@ -220,35 +232,39 @@ namespace TwinCatAnalysis.Models
                             variable.InstanceDefinitionSource = definitionFile.FileName;
                         }
 
-                        variable.DefinitionSource = Path.GetFileNameWithoutExtension(FileName);
+                        variable.DefinitionSource = 
+                            Path.GetFileNameWithoutExtension(FileName);
+
                         Variables.Add(variable);
                     }
                 }
             }
         }
-
-        
         #endregion
 
+
         #region Implementation Analysis
+        /// <summary>
+        /// Analyzes the implementation section of the file
+        /// and identifies variable usages and dependencies.
+        /// </summary>
         private void AnalyzeImplementation()
         {
             CurrentLineNumber = 1;
 
-            StringReader reader = new StringReader(ImplementationText);
+            var reader = new StringReader(ImplementationText);
             string line;
-
-            // string THEN/ELSE - to know that is from IF expression
 
             while ((line = reader.ReadLine()) != null)
             {
+                // RemoveComments is a function that removes every type of a comment in the line
                 line = RemoveComments(line);
+
                 if (string.IsNullOrWhiteSpace(line))
                 {
                     CurrentLineNumber++;
                     continue;
                 }
-
 
                 if (line.StartsWith("CASE"))
                 {
@@ -266,7 +282,7 @@ namespace TwinCatAnalysis.Models
                     AnalyzeIfStatement(line);
                 }
 
-                // Functions, Arguments...
+                // Functions or Arguments
                 else if ((line.Contains(":=") || line.Contains("=>")))
                 {
                     int parenthesisDepth = 0;
@@ -288,51 +304,61 @@ namespace TwinCatAnalysis.Models
                             // FunctionArgument
                             if (parenthesisDepth > 0)
                             {
-                                // fbStop(CLK:= bStop);
-                                // fbStart(bBlinker => bBlinker);
+                                // example: fbStop(CLK:= bStop);  or  fbStart(bBlinker => bBlinker);
                                 AnalyzeFunctionCall(line);
                                 break;
                             }
                             // Assignment
                             else
                             {
-                                // "fbTimer1.IN := TRUE;"
-
+                                // example: "fbTimer1.IN := TRUE;"
                                 AnalyzeAssignment(line);
                                 break;
                             }
                         }
                     }
                 }
-                else
+                else if (CurrentCase != "" && Regex.IsMatch(line, @"^\d+\s*:")) // especially for case numbers (0:, 5:...)
+                {
+                    continue;
+                }
+                else if (line.Equals("END_IF"))
+                {
+                    continue;
+                }
+                else 
                 {
                     AnalyzePoucCall(line);
-
                 }
+
                     CurrentLineNumber++;
             }
         }
 
+
+        /// <summary>
+        /// Analyzes a program or function call and creates
+        /// a dependency between the current file and the called file.
+        /// </summary>
         private void AnalyzePoucCall(string line)
         {
             string pattern = @"^\s*([A-Za-z_]\w*)\s*\(\s*\)\s*;?$";
 
             Match match = Regex.Match(line, pattern);
 
-            if (match != null)
+            if (match.Success)
             {
                 string name = match.Groups[1].Value;
                 TcFile calledFile = FindFile(name);
 
                 if (calledFile != null)
                 {
-                    CodeDependency dependency = new CodeDependency();
+                    var dependency = new CodeDependency();
                     dependency.From = this;
                     dependency.To = calledFile;
                     dependency.DependencyType = "ProgramCall";
 
                     Dependencies.Add(dependency);
-                    // {TwinCatAnalysis.Models.TcFile} -> .FileName returns the name of the file, even if they are both objects
                 }
             }
         }
@@ -342,131 +368,120 @@ namespace TwinCatAnalysis.Models
 
 
         #region Statement Analysis
+        /// <summary>
+        /// Analyzes a CASE statement and records the variable
+        /// used as its condition.
+        /// </summary>
         private void AnalyzeCaseStatement(string line)
         {
-            // pr. line = CASE iStateFB OF, different then CASE iState OF
-            // CASE iStateFB(), iStateFB()
-            // GetState(iStateFB)  group1 - GetState, group2 - iStateFB
+            string casePattern = @"CASE\s*(.+?)\s*OF";
+            Match matchCasePattern = Regex.Match(line, casePattern);
 
-            //string isFunction = @"^\s*(\w+)\s*\((.*?)\)\s*$";
-
-            string CasePattern = @"CASE\s*(.+?)\s*OF";
-            Match matchCasePattern = Regex.Match(line, CasePattern);
-            string expression = matchCasePattern.Groups[1].Value;
 
             if (matchCasePattern.Success)
             {
-                VariableUsage usages = new VariableUsage();
+                string expression = matchCasePattern.Groups[1].Value; // expression between CASE OF
+
               
-                    if (expression.Contains("."))
-                    {
-                        expression = expression.Split('.')[0];
-                    }
-
-                    Variable variable = FindVariable(expression);
-
-                    if (variable != null)
-                    {
-                        usages.Variable = variable; 
-                        usages.usageType = UsageType.Read;
-                        usages.usageContext = UsageContext.CaseCondition;
-                        usages.CaseName = line;
-                        usages.lineNumber = CurrentLineNumber;
-
-                        variable.Usages.Add(usages);
-                    }
-            }
-            // other types of CASE? (in my example only with variable)
-        }
-        private void AnalyzeIfStatement(string line)
-        {
-            string IfPattern = @"^(?:IF|ELSIF)\s*(.+?)\s*THEN";
-
-            Match matchIfPattern = Regex.Match(line, IfPattern);
-            string condition = matchIfPattern.Groups[1].Value;
-
-            // IF fbStart.Q = TRUE AND rLength <> 0 AND rWidth <> 0 AND (iLastState = 5 OR iLastState = 0) THEN
-            // ELSIF fbStart.Q = TRUE AND rLength <> 0 AND rWidth <> 0 AND bXFor = TRUE THEN
-            // iState:= 30;
-
-            // so we get ( fbStart.Q = TRUE AND rLength <> 0 AND rWidth <> 0 AND (iLastState = 5 OR iLastState = 0) )
-
-            List<string> elements = new List<string>();
-            string patternForElements = @"\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\b";         //
-
-            MatchCollection matchesElements = Regex.Matches(condition, patternForElements);
-
-            foreach (Match match in matchesElements)
-            {
-                string element = match.Value;
-
-                if (element.Contains("."))
+                // We need only the variable, not the member
+                if (expression.Contains("."))
                 {
-                    element = element.Split('.')[0];
+                    expression = expression.Split('.')[0];
                 }
 
-                elements.Add(element);
-            }
-
-
-            foreach(string element in elements)
-            {
-                Variable variable = FindVariable(element);
+                Variable variable = FindVariable(expression);
 
                 if (variable != null)
                 {
-                    VariableUsage usages = new VariableUsage();
+                    var usage = new VariableUsage 
+                    { 
+                        Variable = variable, 
+                        usageType = UsageType.Read, 
+                        usageContext = UsageContext.CaseCondition, 
+                        CaseName = line, 
+                        lineNumber = CurrentLineNumber 
+                    };
 
-                    usages.usageType = UsageType.Read;
-                    usages.usageContext = UsageContext.IfCondition;
-                    usages.lineNumber = CurrentLineNumber;
-                    usages.Variable = variable; 
+                    variable.Usages.Add(usage);
+                }
+            }
+        }
 
+        /// <summary>
+        /// Analyzes an IF or ELSIF condition and records
+        /// all variables used by the condition.
+        /// </summary>
+        private void AnalyzeIfStatement(string line)
+        {
+            string ifPattern = @"^(?:IF|ELSIF)\s*(.+?)\s*THEN";
 
-                    // IF inside Case
-                    if (CurrentCase != "")
+            Match matchIfPattern = Regex.Match(line, ifPattern);
+
+            if (matchIfPattern.Success)
+            {
+                string condition = matchIfPattern.Groups[1].Value;  // condition is whole condition between IF and THEN
+
+                // IF fbStart.Q = TRUE AND rLength <> 0 AND rWidth <> 0 AND (iLastState = 5 OR iLastState = 0) THEN
+                // ELSIF fbStart.Q = TRUE AND rLength <> 0 AND rWidth <> 0 AND bXFor = TRUE THEN
+                // iState:= 30;
+
+                // so we get ( fbStart.Q = TRUE AND rLength <> 0 AND rWidth <> 0 AND (iLastState = 5 OR iLastState = 0) )
+
+                var elements = new List<string>();
+
+                string elementPattern = @"\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\b";         //
+
+                MatchCollection matchesElements = Regex.Matches(condition, elementPattern);
+
+                // if it is complex IF condition, we take whole line and add all elements(variables) in a list, below we handle their usage
+                foreach (Match match in matchesElements)
+                {
+                    string element = match.Value;
+
+                    if (element.Contains("."))  // we want only the variable, not the member
                     {
-                        usages.CaseName = CurrentCase;
+                        element = element.Split('.')[0];
                     }
-                    variable.Usages.Add(usages);
+
+                    elements.Add(element);
                 }
 
+
+                foreach (string element in elements)
+                {
+                    Variable variable = FindVariable(element);
+
+                    if (variable != null)
+                    {
+                        var usage = new VariableUsage
+                        {
+                            Variable = variable,
+                            usageType = UsageType.Read,
+                            usageContext = UsageContext.IfCondition,
+                            lineNumber = CurrentLineNumber,
+                        };
+
+                        // IF inside Case
+                        if (CurrentCase != "")
+                        {
+                            usage.CaseName = CurrentCase;
+                        }
+
+                        variable.Usages.Add(usage);
+                    }
+                }
             }
-
-            //foreach (var variable in Variables)
-            //{
-            //    for (int i = 0; i < listOfElements.Count; i++)
-            //    {
-            //        if (listOfElements[i].Contains("."))
-            //        {
-            //            listOfElements[i] = listOfElements[i].Split('.')[0];
-            //        }
-
-            //        VariableUsage usages = new VariableUsage();
-
-            //        if (listOfElements[i].Contains(variable.Name))
-            //        {
-            //            //usages.Variable = variable; // ?
-            //            usages.usageType = UsageType.Read;
-            //            usages.usageContext = UsageContext.IfCondition;
-            //            usages.lineNumber = CurrentLineNumber;
-
-            //            // IF inside Case
-            //            if (CurrentCase != "")
-            //            {
-            //                usages.CaseName = CurrentCase;
-            //            }
-            //            variable.Usages.Add(usages);
-            //        }
-            //    }
-            //}
         }
+
+        /// <summary>
+        /// Analyzes an assignment and records the variable being written
+        /// and the variables being read from the right-hand side.
+        /// </summary>
         private void AnalyzeAssignment(string line)
         {
+            string assignmentPattern = @"^\s*(.*?)\s*:=\s*(.*?)\s*;?$";
 
-            string assignPattern = @"^\s*(.*?)\s*:=\s*(.*?)\s*;?$";
-
-            Match match = Regex.Match(line, assignPattern);
+            Match match = Regex.Match(line, assignmentPattern);
 
             if (match.Success)
             {
@@ -474,7 +489,7 @@ namespace TwinCatAnalysis.Models
                 string rightSide = match.Groups[2].Value.Trim();
 
 
-                // LEFT:
+                // Left side
                 if (leftSide.Contains("."))
                 {
                     leftSide = leftSide.Split('.')[0];
@@ -484,32 +499,34 @@ namespace TwinCatAnalysis.Models
 
                 if (variable != null)
                 {
-                    VariableUsage usages = new VariableUsage();
+                    var usage = new VariableUsage();
 
-                    usages.Variable = variable; // do i need this?
-                    usages.usageType = UsageType.Write;
-                    usages.usageContext = UsageContext.Assignment;
+                    usage.Variable = variable;
+                    usage.usageType = UsageType.Write;
+                    usage.usageContext = UsageContext.Assignment;
 
-                    usages.lineNumber = CurrentLineNumber;
+                    usage.lineNumber = CurrentLineNumber;
 
                     if (CurrentCase != "")
                     {
-                        usages.CaseName = CurrentCase;
+                        usage.CaseName = CurrentCase;
                     }
-                    variable.Usages.Add(usages);
 
+                    variable.Usages.Add(usage);
                 }
 
 
-                // RIGHT:
-                List<string> rightSides = new List<string>();
-                string assignmentPattern = @"\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\b";
+                // Right side
+                // it could be complex, so we make list
+                var rightSides = new List<string>();
 
-                MatchCollection matches = Regex.Matches(rightSide, assignmentPattern);
+                string rightSidePattern = @"\b[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*\b";
 
-                foreach (Match m in matches)
+                MatchCollection matches = Regex.Matches(rightSide, rightSidePattern);
+
+                foreach (Match matchRightSide in matches)
                 {
-                    rightSides.Add(m.Value);
+                    rightSides.Add(matchRightSide.Value);
                 }
                 // for rightSide: (iCount - 1)*rWidth + (iCount - 1)*10 - MotorX.MC_ReadActualPosition.Position
                 // rightSides list will be: iCount, rWidth, iCount, rWidth, MotorX.MC_ReadActualPosition.Position
@@ -522,38 +539,40 @@ namespace TwinCatAnalysis.Models
                          rightSides[i] = rightSides[i].Split('.')[0];
                      }
 
-                 Variable var = FindVariable(rightSides[i]);
+                    Variable rightSideVariable = FindVariable(rightSides[i]);
 
-
-                     if (var != null)
+                     if (rightSideVariable != null)
                      {
-                        VariableUsage usages = new VariableUsage();
+                        var usage = new VariableUsage();
 
-                        usages.Variable = var;
-                        usages.usageType = UsageType.Read;
-                        usages.usageContext = UsageContext.Assignment;
-                        usages.lineNumber = CurrentLineNumber;
+                        usage.Variable = rightSideVariable;
+                        usage.usageType = UsageType.Read;
+                        usage.usageContext = UsageContext.Assignment;
+                        usage.lineNumber = CurrentLineNumber;
 
                          if (CurrentCase != "")
                          {
-                             usages.CaseName = CurrentCase;
+                            usage.CaseName = CurrentCase;
                          }
-                         var.Usages.Add(usages);
+
+                        rightSideVariable.Usages.Add(usage);
                      }
                  }
             }
         }
+
+        /// <summary>
+        /// Analyzes a function call and records the function variable
+        /// and variables passed through its arguments.
+        /// </summary>
         private void AnalyzeFunctionCall(string line)
         {
 
             // MotorX.MC_Power(Axis:= MotorX.Motor, Enable:= bPowerEnable, Enable_Positive:= bPowerEnable, Enable_Negative:= bPowerEnable, Override:= 100.0);
-            // MotorX → FunctionalCall
-
-
-            // example line:
-            // MotorX.MC_Power(Axis:= MotorX.Motor, Enable:= bPowerEnable, Enable_Positive:= bPowerEnable, Enable_Negative:= bPowerEnable, Override:= 100.0);
+            // MotorX -> FunctionalCall, MC_Power -> Member, arguments are inside ()
 
             string pattern = @"^\s*([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*\((.*)\)\s*;?$";
+
             Match match = Regex.Match(line, pattern);
 
 
@@ -562,8 +581,7 @@ namespace TwinCatAnalysis.Models
                 string functionCall = match.Groups[1].Value;
                 string arguments = match.Groups[2].Value;
 
-                // left side CALL - example:
-                // MotorX.MC_Power
+                // Left side CALL
                 if (functionCall.Contains("."))
                 {
                     functionCall = functionCall.Split('.')[0];
@@ -571,33 +589,28 @@ namespace TwinCatAnalysis.Models
 
                 Variable variable = FindVariable(functionCall);
 
-                
                 if (variable != null)
                 {
-                    VariableUsage usages = new VariableUsage();
+                    var usage = new VariableUsage();
 
-                    usages.Variable = variable;
-                    usages.usageType = UsageType.Read;
-                    usages.usageContext = UsageContext.FunctionalCall;
-                    usages.lineNumber = CurrentLineNumber;
+                    usage.Variable = variable;
+                    usage.usageType = UsageType.Read;
+                    usage.usageContext = UsageContext.FunctionalCall;
+                    usage.lineNumber = CurrentLineNumber;
 
-                    variable.Usages.Add(usages);
+                    variable.Usages.Add(usage);
                 }
-                
 
 
-                // right side ARGUMENTS - example:
-                // Axis:= MotorX.Motor, Enable:= bPowerEnable, Enable_Positive:= bPowerEnable, Enable_Negative:= bPowerEnable, Override:= 100.0
-                List<string> rightSides = new List<string>();
-                // MotorX.Motor, bPowerEnable..
 
-                string argPattern = @"(:=|=>)\s*([^,]+)";
-                MatchCollection matches = Regex.Matches(arguments, argPattern);
+                // Right side ARGUMENTS
+                string argumentPattern = @"(:=|=>)\s*([^,]+)";
+                MatchCollection matches = Regex.Matches(arguments, argumentPattern);
 
-                foreach (Match m in matches)
+                foreach (Match argumentMatch in matches)
                 {
-                    string op = m.Groups[1].Value;
-                    string rightSide = m.Groups[2].Value.Trim();
+                    string operation = argumentMatch.Groups[1].Value;
+                    string rightSide = argumentMatch.Groups[2].Value.Trim();
                     // MotorX.Motor, bPowerEnable
 
                     if (rightSide.Contains("."))
@@ -605,28 +618,28 @@ namespace TwinCatAnalysis.Models
                         rightSide = rightSide.Split('.')[0];
                     }
 
-                    Variable var = FindVariable(rightSide);
+                    Variable argumentVariable = FindVariable(rightSide);
 
 
-                    if (var != null)
+                    if (argumentVariable != null)
                     {
-                         VariableUsage usages = new VariableUsage();
+                        var usage = new VariableUsage();
 
-                        usages.Variable = var;
-                        usages.usageContext = UsageContext.FunctionArgument;
-                        usages.lineNumber = CurrentLineNumber;
+                        usage.Variable = argumentVariable;
+                        usage.usageContext = UsageContext.FunctionArgument;
+                        usage.lineNumber = CurrentLineNumber;
 
-                        if (op == ":=")
-                            usages.usageType = UsageType.Read;
+                        if (operation == ":=")
+                            usage.usageType = UsageType.Read;
                         else
-                            usages.usageType = UsageType.Write;
+                            usage.usageType = UsageType.Write;
 
                         if (CurrentCase != "")
                         {
-                            usages.CaseName = CurrentCase;
+                            usage.CaseName = CurrentCase;
                         }
 
-                        var.Usages.Add(usages);
+                        argumentVariable.Usages.Add(usage);
                     }
                 }
             }
@@ -635,27 +648,30 @@ namespace TwinCatAnalysis.Models
         #endregion
 
 
-
-        #region Private Variables
-
-        #endregion
-
-
-        #region Public Variables
-        #endregion
-
-
+        #region Search Methods
+        /// <summary>
+        /// Finds the variable with the specified name in the current file.
+        /// </summary>
+        /// <param name="name">The name of the variable to find.</param>
+        /// <returns>The matching variable, or null if it cannot be found.</returns>
         private Variable FindVariable(string name)
         {
             return Variables.FirstOrDefault(v => v.Name == name);
         }
+
+        /// <summary>
+        /// Finds the file that defines the specified type.
+        /// </summary>
+        /// <param name="type">The type or file name to search for.</param>
+        /// <returns>The matching file, or null if it cannot be found.</returns>
         private TcFile FindFile(string type)
         {
-            return Project.allFiles.FirstOrDefault(f =>
+            return Project.AllFiles.FirstOrDefault(f =>
                 Path.GetFileNameWithoutExtension(f.FileName) == type);
         }
+        #endregion
 
-
+      
     }
 }
 

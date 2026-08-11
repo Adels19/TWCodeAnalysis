@@ -12,28 +12,42 @@ namespace TwinCatAnalysis.Models
     public class TcProject
     {
 
-        public string name { get; set; } 
+        #region Properties
         public string FilePath { get; set; } 
         public TcPlcProject  PlcProjects { get; set; } = new TcPlcProject();
-        // {TwinCatAnalysis.Models.TcPlcProject}    
+        #endregion
 
+        #region Constructor
         public TcProject()
         {
             PlcProjects = new TcPlcProject();     
         }
+        #endregion
 
+
+        #region Methods
+        /// <summary> 
+        /// Loads the PLC project from the TwinCAT project directory. 
+        /// </summary>
         public void Load()
         {
-            var dir = Path.GetDirectoryName(FilePath);  // "C:\\plc_project\\CNCPlasma\\CNCPlasma"
+            var directoryPath = Path.GetDirectoryName(FilePath);  // "C:\\plc_project\\CNCPlasma\\CNCPlasma"
 
 
-            foreach (var plcprojPath in Directory.EnumerateFiles(dir, "*.plcproj", SearchOption.AllDirectories))
+            foreach (var plcProjectPath in Directory.EnumerateFiles(directoryPath, "*.plcproj", SearchOption.AllDirectories))
             {
-                var plc = new TcPlcProject { FilePath = plcprojPath };  // "C:\\plc_project\\CNCPlasma\\CNCPlasma\\CNCPlasma\\CNCPlasma.plcproj"
-                plc.Load();
-                PlcProjects = plc;
+                var plcProject = new TcPlcProject 
+                {
+                    FilePath = plcProjectPath
+                };  
+
+                plcProject.Load();
+
+                PlcProjects = plcProject;
+
                 break;
             }
         }
+        #endregion
     }
 }

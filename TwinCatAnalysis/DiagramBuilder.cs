@@ -1,6 +1,7 @@
 ﻿using DevExpress.Diagram.Core;
 using DevExpress.Utils;
 using DevExpress.XtraDiagram;
+using DevExpress.XtraEditors.Filtering;
 using DevExpress.XtraGrid.Views.Layout;
 using System;
 using System.Collections.Generic;
@@ -21,34 +22,6 @@ namespace TwinCatAnalysis
         {
             this.diagramControl = diagramControl;
         }
-
-
-        //public void Build(List<Variable> variables)
-        //{
-        //    diagramControl.Items.Clear();
-
-        //    int x = 50;
-        //    int y = 50;
-
-        //    foreach (var variable in variables)
-        //    {
-        //        DiagramShape shape = new DiagramShape();
-
-        //        shape.Content = variable.Name;
-        //        shape.Position = new PointFloat(x, y);
-        //        shape.Width = 150;
-        //        shape.Height = 50;
-
-        //        diagramControl.Items.Add(shape);
-
-        //        y += 70;
-        //    }
-
-        //    //diagramControl.FitToDrawing();
-        //}
-
-       // TODO:
-       // MAKE GOOD LOOKING DIAGRAM CONTROL, especially the properties - margins, space etc..
 
         public void BuildDependencies(List<Variable> variables)
         {
@@ -177,102 +150,186 @@ namespace TwinCatAnalysis
                 }
 
             }
-
             diagramControl.FitToDrawing();
-            //internal void BuildFile(string definitionSource, List<Variable> variables)
-            //{
-            //    diagramControl.Items.Clear();
-
-            //    DiagramContainer container = new DiagramContainer();
-
-            //    container.Header = definitionSource;
-            //    container.ShowHeader = true;
-
-            //    container.Position = new PointFloat(50, 50);
-            //    container.Width = 500;
-
-            //    diagramControl.Items.Add(container);
-
-            //    var fileVariables = variables
-            //        .Where(v => v.DefinitionSource == definitionSource)
-            //        .ToList();
-
-            //    int y = 100;
-
-            //    container.Height = 120 + (fileVariables.Count * 70);
-
-            //    diagramControl.Items.Add(container);
-
-            //    foreach (var variable in fileVariables)
-            //    {
-            //        DiagramShape shape = new DiagramShape();
-
-            //        shape.Content = variable.Name;
-
-            //        shape.Position = new PointFloat(100, y);
-
-            //        shape.Width = 150;
-            //        shape.Height = 50;
-
-            //        container.Items.Add(shape);
-
-            //        y += 70;
-            //    }
-            //    diagramControl.FitToDrawing();
-            //}
-
         }
-
 
         public void Build(List<TcFile> files)
         {
             diagramControl.Items.Clear();
 
-            Dictionary<TcFile, DiagramShape> nodes =
-                new Dictionary<TcFile, DiagramShape>();
+            var fileNodes = new Dictionary<TcFile, DiagramShape>();
+            var variableNodes = new Dictionary<Variable, DiagramShape>();
+            var definitionNodes = new Dictionary<TcFile, DiagramShape>();
 
-            int x = 50;
-            int y = 50;
+            // Layout
+            int fileX = 50;
+
+            int variableX = 1400;
+            int definitionX = 2600;
+
+            int startY = 50;
+            int spacing = 100;
+
+            // Colors
+            Color fileColor = Color.FromArgb(52, 73, 94);
+            Color variableColor = Color.FromArgb(142, 68, 173);
+            Color instanceColor = Color.FromArgb(230, 126, 34);
+            Color definitionColor = Color.FromArgb(39, 125, 161);
+
+
+            // FILES
+            int fileY = startY;
 
             foreach (TcFile file in files)
             {
-                DiagramShape node = new DiagramShape();
+                var node = CreateNode(file.FileName, fileColor, 220, 60);
 
-                node.Content = file.FileName;
-                node.Position = new PointFloat(x, y);
-                node.Width = 180;
-                node.Height = 60;
-
-                node.Appearance.BackColor = Color.FromArgb(52, 73, 94);
-                node.Appearance.ForeColor = Color.White;
-                node.Appearance.BorderSize = 2;
+                node.Position = new PointFloat(fileX, fileY);
 
                 diagramControl.Items.Add(node);
+                fileNodes[file] = node;
 
-                nodes.Add(file, node);
-
-                y += 100;
+                fileY += spacing;
             }
 
+
+            // VARIABLES
+            int variableY = startY;
 
             foreach (TcFile file in files)
             {
-                foreach(TcFile.CodeDependency dependency in file.Dependencies)
+                foreach (Variable variable in file.Variables)
                 {
-                    if (!nodes.ContainsKey(dependency.From) || !nodes.ContainsKey(dependency.To))
-                    {
-                        continue;
-                    }
+                    Color color = variable.isInstance ? instanceColor : variableColor;
 
-                    DiagramConnector connector = new DiagramConnector();
+                    var node = CreateNode($"{variable.Name} : {variable.Type}", color, 220, 55);
 
-                    connector.BeginItem = nodes[dependency.From];
-                    connector.EndItem = nodes[dependency.To];
+                    node.Position = new PointFloat(variableX, variableY);
 
-                    diagramControl.Items.Add(connector);
+                    diagramControl.Items.Add(node);
+                    variableNodes[variable] = node;
+
+                    // File -> Variable
+                    AddConnector(fileNodes[file],node);
+
+                    variableY += spacing;
                 }
             }
+
+
+            // DEFINITION SOURCES
+            var definitionFiles = files
+                .SelectMany(f => f.Variables)
+                .Where(v =>
+                    v.isInstance &&
+                    !string.IsNullOrEmpty(v.InstanceDefinitionSource))
+                .Select(v =>
+                    files.FirstOrDefault(f =>
+                        f.FileName == v.InstanceDefinitionSource))
+                .Where(f => f != null)
+                .Distinct()
+                .ToList();
+
+            int definitionY = startY;
+
+            foreach (TcFile file in definitionFiles)
+            {
+                var node = CreateNode(file.FileName, definitionColor, 220, 60);
+
+                node.Position = new PointFloat(definitionX, definitionY);
+
+                diagramControl.Items.Add(node);
+                definitionNodes[file] = node;
+
+                definitionY += spacing;
+            }
+
+
+            // INSTANCE -> DEFINITION SOURCE
+            foreach (TcFile file in files)
+            {
+                foreach (Variable variable in file.Variables)
+                {
+                    if (!variable.isInstance)
+                        continue;
+
+                    if (string.IsNullOrEmpty(variable.InstanceDefinitionSource))
+                        continue;
+
+                    if (!variableNodes.TryGetValue(variable, out var variableNode))
+                        continue;
+
+                    TcFile definitionFile = files.FirstOrDefault(f =>
+                        f.FileName == variable.InstanceDefinitionSource);
+
+                    if (definitionFile == null)
+                        continue;
+
+                    if (!definitionNodes.TryGetValue(
+                        definitionFile,
+                        out var definitionNode))
+                        continue;
+
+                    AddConnector(variableNode, definitionNode, ArrowDescriptions.ClosedDiamond);
+                }
+            }
+
+            // FILE DEPENDENCIES
+            foreach (TcFile file in files)
+            {
+                foreach (TcFile.CodeDependency dependency in file.Dependencies)
+                {
+                    if (!fileNodes.TryGetValue(
+                        dependency.From,
+                        out var fromNode))
+                        continue;
+
+                    if (!fileNodes.TryGetValue(
+                        dependency.To,
+                        out var toNode))
+                        continue;
+
+                    AddConnector(fromNode, toNode, ArrowDescriptions.FilledDoubleArrow);
+                }
+            }
+
+            // LAYOUT
             diagramControl.FitToDrawing();
         }
+
+        private DiagramShape CreateNode(string text, Color color, int width, int height)
+        {
+            var node = new DiagramShape
+            {
+                Content = text,
+                Shape = BasicShapes.RoundedRectangle,
+                Width = width,
+                Height = height
+            };
+
+            node.Appearance.BackColor = color;
+            node.Appearance.ForeColor = Color.White;
+            node.Appearance.BorderSize = 2;
+            node.Appearance.Font = new Font(
+                "Segoe UI",
+                9F,
+                FontStyle.Bold);
+
+            return node;
+        }
+
+        private void AddConnector(DiagramItem begin, DiagramItem end, ArrowDescription endArrow = null)
+        {
+            var connector = new DiagramConnector
+            {
+                BeginItem = begin,
+                EndItem = end,
+                Type = ConnectorType.Curved,
+                EndArrow = endArrow
+            };
+
+            diagramControl.Items.Add(connector);
+        }
+
     }
 }

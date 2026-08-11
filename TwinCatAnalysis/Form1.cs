@@ -40,7 +40,6 @@ namespace TwinCatAnalysis
         private DiagramBuilder dependencyDiagramBuilder;
         private TcSolution solution;
 
-
         private void btnOpenProject_Click(object sender, EventArgs e)
         {
 
@@ -50,7 +49,7 @@ namespace TwinCatAnalysis
 
             if (res == DialogResult.OK)
             {
-                projectPath = openFileDialog.FileName;
+                projectPath = openFileDialog.FileName;      // CNCPlasma.sln 
 
                 ProjectLoader loader = new ProjectLoader();
 
@@ -75,7 +74,7 @@ namespace TwinCatAnalysis
                 //diagramBuilder.BuildFile();
                 diagramBuilder.BuildDependencies(UiVariables);
 
-                dependencyDiagramBuilder.Build(solution.Projects[0].PlcProjects.allFiles);
+                dependencyDiagramBuilder.Build(solution.Projects[0].PlcProjects.AllFiles);
 
             }
         }

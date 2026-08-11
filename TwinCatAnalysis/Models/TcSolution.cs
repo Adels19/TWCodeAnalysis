@@ -3,9 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 
 namespace TwinCatAnalysis.Models
 {
@@ -14,22 +11,30 @@ namespace TwinCatAnalysis.Models
     public class TcSolution
     {
 
+        #region Properties
         public string FilePath { get; set; }
         public List<TcProject> Projects { get; set; }  // example Motion.tsproj, HMI.tsproj..
+        #endregion
 
+        #region Constructor
         public TcSolution() 
         {
             Projects = new List<TcProject>();
         }
+        #endregion
 
+        #region Methods
+
+        /// <summary>
+        /// Loads all TwinCAT projects from the solution file
+        /// and initializes their PLC project data.
+        /// </summary>
         public void Load()  
         {
-            var dir = Path.GetDirectoryName(FilePath);  // C:\plc_project\CNCPlasma
-
-            var x = SolutionFile.Parse(FilePath).ProjectsByGuid
+            var projectPaths = SolutionFile.Parse(FilePath).ProjectsByGuid
                 .Select(s => s.Value.AbsolutePath).Where(g => g.EndsWith(".tsproj") || g.EndsWith(".tspproj")).ToList();
 
-            foreach (var tsprojPath in x)  
+            foreach (var tsprojPath in projectPaths)  
             {
                 var project = new TcProject { FilePath = tsprojPath };  // "C:\\plc_project\\CNCPlasma\\CNCPlasma\\CNCPlasma.tsproj"
                 project.Load(); 
@@ -37,23 +42,27 @@ namespace TwinCatAnalysis.Models
             }
         }
 
-
-        
+        /// <summary>
+        /// Collects and returns all variables from all PLC files
+        /// across all projects in the solution.
+        /// </summary>
         public List<Variable> GetAllVariables()
         {
             List<Variable> variables = new List<Variable>();
 
             foreach (var project in Projects)
             {
-                foreach(var file in project.PlcProjects.allFiles)
+                foreach(var file in project.PlcProjects.AllFiles)
                 {
-                    foreach(var v in file.Variables)    
+                    foreach(var variable in file.Variables)    
                     {
-                        variables.Add(v);
+                        variables.Add(variable);
                     }
                 }
             }
             return variables;
         }
+
+        #endregion
     }
 }
