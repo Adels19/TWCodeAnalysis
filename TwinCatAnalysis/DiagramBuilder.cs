@@ -12,18 +12,27 @@ using TwinCatAnalysis.Models;
 using static DevExpress.Data.Mask.Internal.RegExMaskMath.CloudOfInts;
 
 
+
 namespace TwinCatAnalysis
 {
     public class DiagramBuilder
     {
         private DiagramControl diagramControl;
 
+        private List<TcFile> currentFiles;
+
+        // connects data object to its visual object
+        private Dictionary<TcFile, DiagramShape> fileNodes = new Dictionary<TcFile, DiagramShape>();
+
+        // stores currently expanded files
+        private HashSet<TcFile> expandedFiles = new HashSet<TcFile>();
+
         public DiagramBuilder(DiagramControl diagramControl)
         {
             this.diagramControl = diagramControl;
         }
 
-        public void BuildDependencies(List<Variable> variables)
+        public void Build(List<Variable> variables)
         {
             
             diagramControl.Items.Clear();
@@ -153,22 +162,25 @@ namespace TwinCatAnalysis
             diagramControl.FitToDrawing();
         }
 
-        public void Build(List<TcFile> files)
+        public void BuildDependencies(List<TcFile> files)
         {
+            currentFiles = files;
+
             diagramControl.Items.Clear();
 
-            var fileNodes = new Dictionary<TcFile, DiagramShape>();
+            fileNodes.Clear();
+
             var variableNodes = new Dictionary<Variable, DiagramShape>();
             var definitionNodes = new Dictionary<TcFile, DiagramShape>();
 
             // Layout
             int fileX = 50;
-
             int variableX = 1400;
             int definitionX = 2600;
 
             int startY = 50;
-            int spacing = 100;
+            int fileSpacing = 100;
+            int variableSpacing = 80;
 
             // Colors
             Color fileColor = Color.FromArgb(52, 73, 94);
@@ -182,22 +194,34 @@ namespace TwinCatAnalysis
 
             foreach (TcFile file in files)
             {
-                var node = CreateNode(file.FileName, fileColor, 220, 60);
+                // is this file currently expanded?
+                bool expanded = expandedFiles.Contains(file);
+                //string text = expanded ? $"{file.FileName}" : $"{file.FileName}";
+
+                var node = CreateNode(file.FileName, fileColor, 280, 70);
 
                 node.Position = new PointFloat(fileX, fileY);
 
                 diagramControl.Items.Add(node);
+
                 fileNodes[file] = node;
 
-                fileY += spacing;
+                fileY += fileSpacing;
             }
 
 
             // VARIABLES
-            int variableY = startY;
-
             foreach (TcFile file in files)
             {
+                // do not create variables if file is collapsed
+                if (!expandedFiles.Contains(file))
+                    continue;
+                // does this file exist as a key in fileNodes
+                if (!fileNodes.TryGetValue(file, out var fileNode))
+                    continue;
+
+                int variableY = (int)fileNode.Position.Y;
+
                 foreach (Variable variable in file.Variables)
                 {
                     Color color = variable.isInstance ? instanceColor : variableColor;
@@ -207,12 +231,13 @@ namespace TwinCatAnalysis
                     node.Position = new PointFloat(variableX, variableY);
 
                     diagramControl.Items.Add(node);
+
                     variableNodes[variable] = node;
 
                     // File -> Variable
-                    AddConnector(fileNodes[file],node);
+                    AddConnector(fileNode, node);
 
-                    variableY += spacing;
+                    variableY += variableSpacing;
                 }
             }
 
@@ -234,20 +259,35 @@ namespace TwinCatAnalysis
 
             foreach (TcFile file in definitionFiles)
             {
-                var node = CreateNode(file.FileName, definitionColor, 220, 60);
+                // Only show definition if at least one
+                // file using it is expanded
+                bool shouldShow = files.Any(f =>
+                    expandedFiles.Contains(f) &&
+                    f.Variables.Any(v =>
+                        v.isInstance &&
+                        v.InstanceDefinitionSource == file.FileName));
+
+                if (!shouldShow)
+                    continue;
+
+                var node = CreateNode(file.FileName, definitionColor, 280, 70);
 
                 node.Position = new PointFloat(definitionX, definitionY);
 
                 diagramControl.Items.Add(node);
+
                 definitionNodes[file] = node;
 
-                definitionY += spacing;
+                definitionY += fileSpacing;
             }
 
 
             // INSTANCE -> DEFINITION SOURCE
             foreach (TcFile file in files)
             {
+                if (!expandedFiles.Contains(file))
+                    continue;
+
                 foreach (Variable variable in file.Variables)
                 {
                     if (!variable.isInstance)
@@ -331,5 +371,34 @@ namespace TwinCatAnalysis
             diagramControl.Items.Add(connector);
         }
 
+        public void HandleClick(Point location)
+        {
+            DiagramItem item =
+                diagramControl.CalcHitItem(location);
+
+            if (item == null)
+                return;
+
+            foreach (var pair in fileNodes)
+            {
+                if (pair.Value == item)
+                {
+                    ToggleFile(pair.Key);
+                    return;
+                }
+            }
+        }
+        public void ToggleFile(TcFile file)
+        {
+            if (expandedFiles.Contains(file))
+                expandedFiles.Remove(file);
+            else
+                expandedFiles.Add(file);
+
+            BuildDependencies(currentFiles);
+        }
     }
 }
+
+// TODO::
+// expand the given file, instnace definition source more good looking

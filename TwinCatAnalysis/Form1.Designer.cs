@@ -231,7 +231,6 @@ namespace TwinCatAnalysis
             this.Controls.Add(this.tabPane1);
             this.Name = "Form1";
             this.Text = "TwinCatCodeAnalyzer";
-            this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.gridControl1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.gridView1)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.tabPane1)).EndInit();

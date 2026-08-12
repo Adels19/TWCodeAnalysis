@@ -39,6 +39,7 @@ namespace TwinCatAnalysis.Models
 
         #endregion
 
+
         #region Nested Classes
         public class CodeDependency
         {
@@ -125,6 +126,7 @@ namespace TwinCatAnalysis.Models
 
         }
         #endregion
+
 
         #region Line Preprocessing
 
@@ -364,7 +366,6 @@ namespace TwinCatAnalysis.Models
         }
 
         #endregion
-
 
 
         #region Statement Analysis
@@ -676,14 +677,6 @@ namespace TwinCatAnalysis.Models
 }
 
 
-// TODO:
-// i could make one function for the code that is repeating
-// i only have case name, should i have something else to remember, like statement or idk?
-// usages.Variable = variable; // yes or no?
-// PRG_CNCPlasma(); -> method call, i already have class, how to handle?
 
-
-
-// also continue with the FindVariable in other functions: functioncall and assignment
 
 

@@ -29,6 +29,8 @@ namespace TwinCatAnalysis
             diagramBuilder = new DiagramBuilder(diagramControl);
 
             dependencyDiagramBuilder = new DiagramBuilder(diagramControl1);
+
+            diagramControl1.MouseClick += DiagramControl_MouseClick;
         }
 
         // we save here the path so later we will set and send to other classes
@@ -72,16 +74,17 @@ namespace TwinCatAnalysis
                 //tabNavigationPage2.PageText = "Dependency Graph";
 
                 //diagramBuilder.BuildFile();
-                diagramBuilder.BuildDependencies(UiVariables);
+                diagramBuilder.Build(UiVariables);
 
-                dependencyDiagramBuilder.Build(solution.Projects[0].PlcProjects.AllFiles);
-
+                dependencyDiagramBuilder.BuildDependencies(solution.Projects[0].PlcProjects.AllFiles);
             }
         }
 
-        private void Form1_Load(object sender, EventArgs e)
-        {
 
+        private void DiagramControl_MouseClick(object sender, MouseEventArgs e)
+        {
+            dependencyDiagramBuilder.HandleClick(e.Location);
         }
+
     }
 }
