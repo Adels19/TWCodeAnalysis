@@ -1,16 +1,5 @@
-﻿using DevExpress.Diagram.Core;
-using DevExpress.Utils;
-using DevExpress.XtraDiagram;
-using DevExpress.XtraVerticalGrid.Events;
-using Microsoft.Build.Construction;
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using TwinCatAnalysis.Core;
 using TwinCatAnalysis.Models;
@@ -28,7 +17,7 @@ namespace TwinCatAnalysis
 
             diagramBuilder = new DiagramBuilder(diagramControl);
 
-            dependencyDiagramBuilder = new DiagramBuilder(diagramControl1);
+            dependencyDiagramBuilder = new DiagramBuilder(diagramControl1, panelFileDetails);
 
             diagramControl1.MouseClick += DiagramControl_MouseClick;
         }
