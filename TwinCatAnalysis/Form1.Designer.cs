@@ -188,7 +188,7 @@ namespace TwinCatAnalysis
             // tabNavigationPage2
             // =====================================================
 
-            this.tabNavigationPage2.Caption = "Graph";
+            this.tabNavigationPage2.Caption = "Dependency Flow";
             this.tabNavigationPage2.Controls.Add(this.diagramControl);
             this.tabNavigationPage2.Name = "tabNavigationPage2";
             this.tabNavigationPage2.Size = new System.Drawing.Size(712, 626);
@@ -222,11 +222,11 @@ namespace TwinCatAnalysis
             // tabNavigationPage3
             // =====================================================
 
-            this.tabNavigationPage3.Caption = "Dependencies";
-            this.tabNavigationPage3.Controls.Add(this.diagramControl1);
-            this.tabNavigationPage3.Controls.Add(this.panelFileDetails);
-            this.tabNavigationPage3.Name = "tabNavigationPage3";
-            this.tabNavigationPage3.Size = new System.Drawing.Size(712, 626);
+            //this.tabNavigationPage3.Caption = "Dependencies";
+            //this.tabNavigationPage3.Controls.Add(this.diagramControl1);
+            //this.tabNavigationPage3.Controls.Add(this.panelFileDetails);
+            //this.tabNavigationPage3.Name = "tabNavigationPage3";
+            //this.tabNavigationPage3.Size = new System.Drawing.Size(712, 626);
 
 
             // =====================================================

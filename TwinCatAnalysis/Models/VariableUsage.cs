@@ -8,15 +8,17 @@ namespace TwinCatAnalysis.Models
 {
     public class VariableUsage
     {
-        public Variable Variable { get; set; }  // it stores the reference to the existing Variable
+        #region Properties
+        public Variable Variable { get; set; }  
         public UsageType usageType { get; set; }
         public UsageContext usageContext { get; set; }
         public int lineNumber { get; set; }
         public string CaseName { get; set; }
 
-
+        #endregion  
     }
 
+    #region Enums
     public enum UsageType
     {
         Read,
@@ -32,5 +34,6 @@ namespace TwinCatAnalysis.Models
         FunctionalCall,
         IfCondition
     }
+    #endregion
 
 }

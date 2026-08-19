@@ -1,26 +1,12 @@
-﻿using DevExpress.Data.Utils;
-using DevExpress.Drawing.Internal.Fonts.Interop;
-using DevExpress.Export.Xl;
-using DevExpress.Utils;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Net.Mime;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Xml;
 using System.Xml.Linq;
-using static DevExpress.Utils.MVVM.Internal.ILReader;
 
 
 namespace TwinCatAnalysis.Models
 {
-
-
 
     public class TcFile
     {
@@ -252,19 +238,19 @@ namespace TwinCatAnalysis.Models
         /// </summary>
         private void AnalyzeImplementation()
         {
-            CurrentLineNumber = 1;
+            CurrentLineNumber = 0;
 
             var reader = new StringReader(ImplementationText);
             string line;
 
             while ((line = reader.ReadLine()) != null)
             {
+                CurrentLineNumber++;
                 // RemoveComments is a function that removes every type of a comment in the line
                 line = RemoveComments(line);
 
                 if (string.IsNullOrWhiteSpace(line))
                 {
-                    CurrentLineNumber++;
                     continue;
                 }
 
@@ -332,8 +318,6 @@ namespace TwinCatAnalysis.Models
                 {
                     AnalyzePoucCall(line);
                 }
-
-                    CurrentLineNumber++;
             }
         }
 

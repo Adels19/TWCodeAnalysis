@@ -54,6 +54,7 @@ namespace TwinCatAnalysis
         }
         #endregion
 
+
         #region TAB 2
         public void Build(List<Variable> variables)
         {
@@ -70,8 +71,18 @@ namespace TwinCatAnalysis
 
             // Vertical starting position
             int y = 50;
-
             const int variableSpacing = 150;
+
+            const int usageSpacing = 200;
+
+            var lineNumbers = variables.SelectMany(v => v.Usages).Select(u => u.lineNumber).Distinct().OrderBy(line => line).ToList();
+
+            Dictionary<int, int> lineXPositions = new Dictionary<int, int>();
+
+            for(int i=0; i< lineNumbers.Count; i++)
+            {
+                lineXPositions[lineNumbers[i]] = usageStartX + i * usageSpacing;
+            }
 
 
             foreach (var group in groups)
@@ -86,12 +97,13 @@ namespace TwinCatAnalysis
 
                 int fileY = (firstVariableY + lastVariableY) / 2 - 35;
 
+                // file node
                 DiagramShape fileShape = new DiagramShape
                 {
                     Content = group.Key,
                     Shape = BasicShapes.RoundedRectangle,
-                    Width = 230,
-                    Height = 70,
+                    Width = 200,
+                    Height = 80,
                     Position = new PointFloat(fileX, fileY)
                 };
 
@@ -105,8 +117,8 @@ namespace TwinCatAnalysis
 
                 diagramControl.Items.Add(fileShape);
 
-                //y += 70;
 
+                // variables
                 for (int i = 0; i < fileVariables.Count; i++)
                 {
                     Variable variable = fileVariables[i];
@@ -115,12 +127,13 @@ namespace TwinCatAnalysis
                     Color nodeColor = variable.isInstance ? instanceColor : variableColor;
                     string content = variable.isInstance ? $"{variable.Name} : {variable.Type}" : variable.Name;
 
+                    // variable node
                     DiagramShape variableShape = new DiagramShape
                     {
                         Content = content,
                         Shape = BasicShapes.RoundedRectangle,
-                        Width = 210,
-                        Height = 45,
+                        Width = 170,
+                        Height = 80,
                         Position = new PointFloat(variableX, variableY)
                     };
 
@@ -137,13 +150,18 @@ namespace TwinCatAnalysis
 
                     AddVariableConnector(fileShape, variableShape);
 
-                    int usageX = usageStartX;
+
+                    var usagesByLine = variable.Usages.GroupBy(u => u.lineNumber).OrderBy(g => g.Key);
 
                     DiagramShape previousUsage = null;
 
-                    foreach (var usage in variable.Usages)
+                    foreach (var usageGroup in usagesByLine)
                     {
-                        DiagramShape usageShape = CreateUsageNode(usage, usageX, variableY);
+
+                        int lineNumber = usageGroup.Key;
+                        int usageX = lineXPositions[lineNumber];
+
+                        DiagramShape usageShape = CreateUsageNode(usageGroup.ToList(), usageX, variableY);
 
                         diagramControl.Items.Add(usageShape);
 
@@ -159,9 +177,7 @@ namespace TwinCatAnalysis
 
                         previousUsage = usageShape;
 
-                        usageX += 220;
                     }
-
                 }
                 y = lastVariableY + variableSpacing + 50;
             }
@@ -189,40 +205,55 @@ namespace TwinCatAnalysis
             diagramControl.Items.Add(connector);
         }
 
-        private DiagramShape CreateUsageNode(VariableUsage usage, int x, int y)
+        private DiagramShape CreateUsageNode(List<VariableUsage> usages, int x, int y)
         {
 
             Color usageColor = Color.Gray;
 
-            switch (usage.usageType)
+            bool hasRead = usages.Any(u => u.usageType == UsageType.Read);
+            bool hasWrite = usages.Any(u => u.usageType == UsageType.Write);
+
+            if (hasRead && hasWrite)
             {
-                case UsageType.Read:
-                    usageColor = Color.FromArgb(76, 175, 80);
-                    break;
+                usageColor = Color.FromArgb(255, 193, 7);
+                usageColor.GetBrightness();
+            }
+            else if (hasWrite)
+            {
+                usageColor = Color.FromArgb(244, 67, 54);
+            }
+            else if (hasRead)
+            {
+                usageColor = Color.FromArgb(76, 175, 80);
 
-                case UsageType.Write:
-                    usageColor = Color.FromArgb(244, 67, 54);
-                    break;
-
-                case UsageType.Call:
-                    usageColor = Color.Gray;
-                    break;
+            }
+            else
+            {
+                usageColor = Color.Gray;
             }
 
+            string content = $"line: {usages[0].lineNumber}\n";
+
+            foreach(var usage in usages)
+            {
+                content += $"{usage.usageType} - " + $"{usage.usageContext}\n";
+            }
+
+            content = content.TrimEnd();
+
+            int height = 60 + usages.Count * 25;
+
             DiagramShape usageShape = new DiagramShape
-            {   
-                 Content =
-                     $"{usage.usageType}\n" +
-                     $"{usage.usageContext}\n" +
-                     $"line: {usage.lineNumber}",
-                
-                 Shape = BasicShapes.RoundedRectangle,
-                
-                 Width = 170,
-                 Height = 80,
-                
-                 Position = new PointFloat(x, y)
-             };
+            {
+                Content = content,
+
+                Shape = BasicShapes.RoundedRectangle,
+
+                Width = 170,
+                Height = height,
+
+                Position = new PointFloat(x, y)
+            };
 
 
             usageShape.Appearance.ForeColor = Color.FromArgb(50, 50, 50);
@@ -260,6 +291,7 @@ namespace TwinCatAnalysis
         }
 
         #endregion
+
 
         #region TAB 3
         public void BuildDependencies(List<TcFile> files)

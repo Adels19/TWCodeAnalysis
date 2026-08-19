@@ -22,8 +22,6 @@ namespace TwinCatAnalysis
             diagramControl1.MouseClick += DiagramControl_MouseClick;
         }
 
-        // we save here the path so later we will set and send to other classes
-
         public string projectPath = "";
         public List<Variable> UiVariables { get; set; } = new List<Variable>();
 
@@ -65,7 +63,7 @@ namespace TwinCatAnalysis
                 //diagramBuilder.BuildFile();
                 diagramBuilder.Build(UiVariables);
 
-                dependencyDiagramBuilder.BuildDependencies(solution.Projects[0].PlcProjects.AllFiles);
+                //dependencyDiagramBuilder.BuildDependencies(solution.Projects[0].PlcProjects.AllFiles);
             }
         }
 
