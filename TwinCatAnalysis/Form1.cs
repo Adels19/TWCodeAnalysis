@@ -19,7 +19,7 @@ namespace TwinCatAnalysis
 
             dependencyDiagramBuilder = new DiagramBuilder(diagramControl1, panelFileDetails);
 
-            diagramControl1.MouseClick += DiagramControl_MouseClick;
+            //diagramControl1.MouseClick += DiagramControl_MouseClick;
         }
 
         public string projectPath = "";
@@ -68,10 +68,10 @@ namespace TwinCatAnalysis
         }
 
 
-        private void DiagramControl_MouseClick(object sender, MouseEventArgs e)
-        {
-            dependencyDiagramBuilder.HandleClick(e.Location);
-        }
+        //private void DiagramControl_MouseClick(object sender, MouseEventArgs e)
+        //{
+        //    dependencyDiagramBuilder.HandleClick(e.Location);
+        //}
 
     }
 }
